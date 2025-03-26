@@ -10,7 +10,8 @@ from .permissions import IsAdminUser, IsManagerOrAdmin
 # Public view: Only admins can register users
 class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.all()
-    permission_classes = [IsAuthenticated, IsAdminUser]  # Only admins can create users
+    #permission_classes = [IsAuthenticated, IsAdminUser]  # Only admins can create users
+    permission_classes = [AllowAny]  # Allow anyone to create users 
     serializer_class = UserSerializer
 
     def post(self, request, *args, **kwargs):
