@@ -12,7 +12,7 @@ import Loans from "./pages/Loans"
 import LoanApplication from "./components/LoanApplication"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
-import { supabase } from '../utils/supabase'
+//import { supabase } from './utils/supabase'
 
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
