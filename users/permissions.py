@@ -1,10 +1,21 @@
-# users/permissions.py
+#users/permissions.py
 from rest_framework.permissions import BasePermission
 
-class IsAdminUser(BasePermission):
+class CanRegisterUsers(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == "admin"
-
-class IsManagerOrAdmin(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ["admin", "manager"]
+        if not request.user.is_authenticated:
+            return False
+            
+        if request.user.role == 'SYSTEM_ADMIN':
+            return True
+            
+        if request.user.role == 'MFI_ADMIN':
+            # MFI Admins can create borrowers and loan officers
+            requested_role = request.data.get('role', 'BORROWER')
+            return requested_role in ['BORROWER', 'LOAN_OFFICER']
+            
+        if request.user.role == 'LOAN_OFFICER':
+            # Loan Officers can only create borrowers
+            return request.data.get('role', 'BORROWER') == 'BORROWER'
+            
+        return False

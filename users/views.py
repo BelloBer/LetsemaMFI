@@ -1,41 +1,36 @@
-# users/views.py
-from rest_framework import generics
-from rest_framework.permissions import AllowAny, IsAuthenticated
+#users/views.py
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework import status
-from .serializers import UserSerializer
-from users.models import User
-from .permissions import IsAdminUser, IsManagerOrAdmin
+from .serializers import UserRegistrationSerializer, UserSerializer
+from .permissions import CanRegisterUsers
+from rest_framework.permissions import IsAuthenticated
 
-# Public view: Only admins can register users
+
+
 class RegisterUserView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    #permission_classes = [IsAuthenticated, IsAdminUser]  # Only admins can create users
-    permission_classes = [AllowAny]  # Allow anyone to create users 
-    serializer_class = UserSerializer
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [CanRegisterUsers]
 
-    def post(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        
+        # For MFI staff, automatically assign the new user to their MFI
+        if request.user.role in ['MFI_ADMIN', 'LOAN_OFFICER']:
+            serializer.validated_data['mfi'] = request.user.mfi
+            
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
 
-# Protected: Only logged-in users can access their profile
+
 class UserProfileView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
+    """
+    View for users to see their own profile
+    """
+    serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
 
-    def get(self, request, *args, **kwargs):
-        serializer = self.serializer_class(request.user)
-        return Response(serializer.data)
-
-# Protected: Only managers & admins can access this view
-class ManagerOnlyView(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
-
-    def get_queryset(self):
-        return User.objects.all()
+    def get_object(self):
+        return self.request.user
