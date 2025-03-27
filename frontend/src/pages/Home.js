@@ -435,7 +435,7 @@ const HomePage = () => {
           </HeroButtons>
         </HeroContent>
         <HeroImage>
-          <Image src="/placeholder.svg?height=400&width=500" alt="Loan Management Dashboard" />
+          <Image src="https://images.pexels.com/photos/316093/pexels-photo-316093.jpeg?auto=compress&cs=tinysrgb&w=600" alt="Loan Management Dashboard" />
         </HeroImage>
       </HeroSection>
 
