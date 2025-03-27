@@ -1,4 +1,4 @@
-#users/permissions.py
+#use
 from rest_framework.permissions import BasePermission
 
 class CanRegisterUsers(BasePermission):

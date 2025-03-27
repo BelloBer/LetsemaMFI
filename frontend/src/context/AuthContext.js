@@ -1,67 +1,78 @@
-"use client"
+//srs/context/AuthContext.js
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import axios from 'axios';
 
-// src/context/AuthContext.js
-import { createContext, useState, useEffect, useContext } from "react"
+const AuthContext = createContext();
 
-// Create the context
-const AuthContext = createContext()
-
-// Custom hook to use the auth context
-export const useAuth = () => {
-  return useContext(AuthContext)
-}
-
-// Provider component
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // Mock login function - replace with actual API call in production
-  const login = async (email, password) => {
-    // This is a placeholder for actual authentication
-    // In a real app, you would call your API here
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (email === "admin@example.com" && password === "password") {
-          const user = {
-            id: "1",
-            name: "John Doe",
-            email: "admin@example.com",
-            role: "Administrator",
-          }
-          setCurrentUser(user)
-          localStorage.setItem("user", JSON.stringify(user))
-          resolve(user)
-        } else {
-          reject(new Error("Invalid credentials"))
-        }
-      }, 1000)
-    })
-  }
-
-  const logout = () => {
-    setCurrentUser(null)
-    localStorage.removeItem("user")
-  }
-
-  // Check if user is already logged in
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser))
+  const api = axios.create({
+    baseURL: process.env.REACT_APP_API_URL,
+    headers: {
+      'Authorization': token ? `Bearer ${token}` : undefined
     }
-    setLoading(false)
-  }, [])
+  });
 
-  const value = {
-    currentUser,
-    login,
-    logout,
-    loading,
-  }
+  const fetchUser = useCallback(async () => {
+    try {
+      const response = await api.get('/api/users/profile/');
+      setUser(response.data);
+    } catch (error) {
+      logout();
+    }
+  }, [api]);
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>
-}
+  const login = async (credentials) => {
+    try {
+      const apiUrl = process.env.REACT_APP_API_URL;
+      if (!apiUrl) throw new Error("API URL not configured");
+      
+      const response = await axios.post(`${apiUrl}/api/users/token/`, credentials, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      localStorage.setItem('token', response.data.access);
+      setToken(response.data.access);
+      
+      // Fetch user profile
+      const profile = await axios.get(`${apiUrl}/api/users/profile/`, {
+        headers: {
+          'Authorization': `Bearer ${response.data.access}`
+        }
+      });
+      
+      setUser(profile.data);
+      return response.data;
+    } catch (error) {
+      console.error('Auth error:', error);
+      const errorData = error.response?.data || { detail: 'Login failed' };
+      throw errorData;
+    }
+  };
 
-export default AuthProvider
+  const logout = (navigate) => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    if (navigate) navigate('/login');
+  };
 
+  useEffect(() => {
+    if (token) {
+      api.defaults.headers['Authorization'] = `Bearer ${token}`;
+      fetchUser();
+    }
+  }, [token, api, fetchUser]);
+
+  return (
+    <AuthContext.Provider value={{ user, token, login, logout, api }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);

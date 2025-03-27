@@ -1,250 +1,120 @@
-"use client"
-
-// src/pages/Login.js
-import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import styled from "styled-components"
-import { FaUser, FaLock, FaSignInAlt } from "react-icons/fa"
+//src/pages/Login.js
+import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
 
 const LoginContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: var(--background);
-`
-
-const LoginCard = styled.div`
-  background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-  width: 100%;
   max-width: 400px;
-  padding: 40px;
-`
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+`;
 
-const Logo = styled.div`
-  font-size: 28px;
-  font-weight: 700;
+const Title = styled.h2`
+  color: #2c3e50;
   text-align: center;
-  margin-bottom: 30px;
-  color: var(--text);
+  margin-bottom: 1.5rem;
+`;
 
-  span {
-    color: var(--primary);
-  }
-`
-
-const FormTitle = styled.h2`
-  font-size: 24px;
-  text-align: center;
-  margin-bottom: 30px;
-  color: var(--text);
-`
-
-const FormGroup = styled.div`
-  margin-bottom: 20px;
-`
-
-const InputGroup = styled.div`
-  position: relative;
-`
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
 
 const Input = styled.input`
-  width: 100%;
-  padding: 12px 15px 12px 45px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
-  font-size: 14px;
-
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
   &:focus {
     outline: none;
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+    border-color: #3498db;
   }
-`
+`;
 
-const InputIcon = styled.div`
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-light);
-  font-size: 16px;
-`
-
-const LoginButton = styled.button`
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--primary);
+const Button = styled.button`
+  padding: 0.75rem;
+  background-color: ${({ disabled }) => (disabled ? '#bdc3c7' : '#3498db')};
   color: white;
-  font-size: 16px;
-  font-weight: 500;
   border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.2s ease;
-
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
+  transition: background-color 0.3s;
   &:hover {
-    background: var(--primary-dark);
+    background-color: ${({ disabled }) => (disabled ? '#bdc3c7' : '#2980b9')};
   }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-`
+`;
 
 const ErrorMessage = styled.div`
-  color: var(--danger);
-  font-size: 14px;
-  margin-top: 5px;
+  padding: 0.75rem;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  margin-bottom: 1rem;
   text-align: center;
-`
+`;
 
-const ForgotPassword = styled.div`
-  text-align: center;
-  margin-top: 20px;
-
-  a {
-    color: var(--primary);
-    font-size: 14px;
-    text-decoration: none;
-    
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-`
-
-const RegisterLink = styled.div`
-  text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
-  
-  a {
-    color: var(--primary);
-    font-weight: 500;
-    text-decoration: none;
-    
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-`
-
-const Login = ({ onLogin }) => {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-
-  const navigate = useNavigate()
+const Login = () => {
+  const [credentials, setCredentials] = useState({
+    username: '',
+    password: '',
+  });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (!email || !password) {
-      setError("Please enter both email and password")
-      return
+    e.preventDefault();
+  
+    if (!credentials.username || !credentials.password) {
+      setError('Please fill in both fields');
+      return;
     }
-
+  
+    setLoading(true);
+    setError(null);
+  
     try {
-      setError("")
-      setLoading(true)
-
-      // For demo purposes, accept any credentials
-      // In a real app, you would validate against your backend
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: "1",
-          name: "Demo User",
-          email: email,
-          role: "Administrator",
-        }),
-      )
-
-      // Call the onLogin callback
-      onLogin()
-
-      // Navigate to dashboard
-      navigate("/dashboard")
-    } catch (error) {
-      setError("Failed to log in. Please check your credentials.")
+      await login(credentials);
+      navigate('/dashboard'); // Make sure this matches your route
+    } catch (err) {
+      console.error('Login error:', err); // Add logging
+      setError(err.detail || err.message || 'Login failed. Please try again.');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <LoginContainer>
-      <LoginCard>
-        <Logo>
-          Letsema<span>.</span>
-        </Logo>
-        <FormTitle>Login to your account</FormTitle>
-
-        <form onSubmit={handleSubmit}>
-          <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaUser />
-              </InputIcon>
-              <Input
-                type="email"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </InputGroup>
-          </FormGroup>
-
-          <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaLock />
-              </InputIcon>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </InputGroup>
-          </FormGroup>
-
-          {error && <ErrorMessage>{error}</ErrorMessage>}
-
-          <LoginButton type="submit" disabled={loading}>
-            {loading ? (
-              "Logging in..."
-            ) : (
-              <>
-                <FaSignInAlt />
-                Login
-              </>
-            )}
-          </LoginButton>
-        </form>
-
-        <ForgotPassword>
-          <a href="/forgot-password">Forgot your password?</a>
-        </ForgotPassword>
-
-        <RegisterLink>
-          Don't have an account? <Link to="/register">Register</Link>
-        </RegisterLink>
-      </LoginCard>
+      <Title>Letsema Login</Title>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      <Form onSubmit={handleSubmit}>
+        <Input
+          type="text"
+          placeholder="Username"
+          value={credentials.username}
+          onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+        />
+        <Input
+          type="password"
+          placeholder="Password"
+          value={credentials.password}
+          onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+        />
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </Button>
+      </Form>
     </LoginContainer>
-  )
-}
+  );
+};
 
-export default Login
-
+export default Login;

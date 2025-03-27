@@ -1,261 +1,197 @@
-"use client"
-
-// src/pages/Register.js
-import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import styled from "styled-components"
-import { FaUser, FaLock, FaEnvelope, FaUserPlus } from "react-icons/fa"
+//src/pages/Register.js
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { register } from '../services/auth';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
 
 const RegisterContainer = styled.div`
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #f1f8f5;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+`;
+
+const Title = styled.h2`
+  color: #004d40;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+`;
+
+const Form = styled.form`
   display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: var(--background);
-`
-
-const RegisterCard = styled.div`
-  background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
-  padding: 40px;
-`
-
-const Logo = styled.div`
-  font-size: 28px;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 30px;
-  color: var(--text);
-
-  span {
-    color: var(--primary);
-  }
-`
-
-const FormTitle = styled.h2`
-  font-size: 24px;
-  text-align: center;
-  margin-bottom: 30px;
-  color: var(--text);
-`
-
-const FormGroup = styled.div`
-  margin-bottom: 20px;
-`
-
-const InputGroup = styled.div`
-  position: relative;
-`
+  flex-direction: column;
+  gap: 1rem;
+`;
 
 const Input = styled.input`
-  width: 100%;
-  padding: 12px 15px 12px 45px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
-  font-size: 14px;
-
+  padding: 0.75rem;
+  border: 1px solid #b0bec5;
+  border-radius: 6px;
+  font-size: 1rem;
   &:focus {
+    border-color: #00796b;
     outline: none;
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
   }
-`
+`;
 
-const InputIcon = styled.div`
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-light);
-  font-size: 16px;
-`
+const Select = styled.select`
+  padding: 0.75rem;
+  border: 1px solid #b0bec5;
+  border-radius: 6px;
+  font-size: 1rem;
+  &:focus {
+    border-color: #00796b;
+    outline: none;
+  }
+`;
 
-const RegisterButton = styled.button`
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--primary);
+const Button = styled.button`
+  padding: 0.75rem;
+  background-color: #004d40;
   color: white;
-  font-size: 16px;
-  font-weight: 500;
   border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: bold;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.2s ease;
-
+  transition: background-color 0.3s ease-in-out;
   &:hover {
-    background: var(--primary-dark);
+    background-color: #00796b;
   }
-
   &:disabled {
-    opacity: 0.7;
+    background-color: #b0bec5;
     cursor: not-allowed;
   }
-`
+`;
 
-const ErrorMessage = styled.div`
-  color: var(--danger);
-  font-size: 14px;
-  margin-top: 5px;
+const Message = styled.div`
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
   text-align: center;
-`
+  margin-bottom: 1rem;
+`;
 
-const LoginLink = styled.div`
-  text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
-  
-  a {
-    color: var(--primary);
-    font-weight: 500;
-    text-decoration: none;
-    
-    &:hover {
-      text-decoration: underline;
+const ErrorMessage = styled(Message)`
+  background-color: #f8d7da;
+  color: #d32f2f;
+  border: 1px solid #f5c6cb;
+`;
+
+const SuccessMessage = styled(Message)`
+  background-color: #d4edda;
+  color: #388e3c;
+  border: 1px solid #c3e6cb;
+`;
+
+const Register = () => {
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role: 'BORROWER',
+    mfi: ''
+  });
+  const [mfis, setMfis] = useState([]);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user, api } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.role === 'SYSTEM_ADMIN') {
+      api.get('/api/mfis/').then(res => setMfis(res.data));
     }
-  }
-`
-
-const Register = ({ onLogin }) => {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-
-  const navigate = useNavigate()
+  }, [user, api]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (!name || !email || !password || !confirmPassword) {
-      setError("Please fill in all fields")
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
-
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      setError("")
-      setLoading(true)
-
-      // For demo purposes, just store the user in localStorage
-      // In a real app, you would register with your backend
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: "1",
-          name: name,
-          email: email,
-          role: "User",
-        }),
-      )
-
-      // Call the onLogin callback
-      onLogin()
-
-      // Navigate to dashboard
-      navigate("/dashboard")
-    } catch (error) {
-      setError("Registration failed. Please try again.")
+      await register(formData);
+      setSuccess('Registration successful! Redirecting...');
+      
+      setTimeout(() => {
+        navigate(user ? '/' : '/login');
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data.detail || 'Registration failed. Please try again.');
     } finally {
-      setLoading(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <RegisterContainer>
-      <RegisterCard>
-        <Logo>
-          Letsema<span>.</span>
-        </Logo>
-        <FormTitle>Create an account</FormTitle>
-
-        <form onSubmit={handleSubmit}>
-          <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaUser />
-              </InputIcon>
-              <Input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
-            </InputGroup>
-          </FormGroup>
-
-          <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaEnvelope />
-              </InputIcon>
-              <Input
-                type="email"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </InputGroup>
-          </FormGroup>
-
-          <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaLock />
-              </InputIcon>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </InputGroup>
-          </FormGroup>
-
-          <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaLock />
-              </InputIcon>
-              <Input
-                type="password"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </InputGroup>
-          </FormGroup>
-
-          {error && <ErrorMessage>{error}</ErrorMessage>}
-
-          <RegisterButton type="submit" disabled={loading}>
-            {loading ? (
-              "Registering..."
-            ) : (
-              <>
-                <FaUserPlus />
-                Register
-              </>
-            )}
-          </RegisterButton>
-        </form>
-
-        <LoginLink>
-          Already have an account? <Link to="/login">Login</Link>
-        </LoginLink>
-      </RegisterCard>
+      <Title>Register New User</Title>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {success && <SuccessMessage>{success}</SuccessMessage>}
+      <Form onSubmit={handleSubmit}>
+        <Input
+          type="text"
+          placeholder="Username"
+          value={formData.username}
+          onChange={(e) => setFormData({...formData, username: e.target.value})}
+          required
+        />
+        <Input
+          type="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={(e) => setFormData({...formData, email: e.target.value})}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={(e) => setFormData({...formData, password: e.target.value})}
+          required
+          minLength="8"
+        />
+        <Select
+          value={formData.role}
+          onChange={(e) => setFormData({...formData, role: e.target.value})}
+          disabled={!user}
+        >
+          <option value="BORROWER">Borrower</option>
+          {user?.role === 'SYSTEM_ADMIN' && (
+            <>
+              <option value="LOAN_OFFICER">Loan Officer</option>
+              <option value="MFI_ADMIN">MFI Admin</option>
+              <option value="CREDIT_ANALYST">Credit Analyst</option>
+              <option value="AUDITOR">Auditor</option>
+              <option value="SYSTEM_ADMIN">System Admin</option>
+            </>
+          )}
+        </Select>
+        {user?.role === 'SYSTEM_ADMIN' && (
+          <Select
+            value={formData.mfi}
+            onChange={(e) => setFormData({...formData, mfi: e.target.value})}
+          >
+            <option value="">Select MFI</option>
+            {mfis.map(mfi => (
+              <option key={mfi.id} value={mfi.id}>
+                {mfi.name}
+              </option>
+            ))}
+          </Select>
+        )}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Registering...' : 'Register'}
+        </Button>
+      </Form>
     </RegisterContainer>
-  )
-}
+  );
+};
 
-export default Register
-
+export default Register;
