@@ -1,6 +1,17 @@
-"use client"
-
-import { FaHome, FaUsers, FaMoneyBillWave, FaChartLine, FaCog, FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa"
+import {
+  FaHome,
+  FaUsers,
+  FaMoneyBillWave,
+  FaChartLine,
+  FaCog,
+  FaSignOutAlt,
+  FaBars,
+  FaTimes,
+  FaHistory,
+  FaCalendarAlt,
+  FaUserCog,
+  FaBuilding,
+} from "react-icons/fa"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import {
@@ -20,7 +31,7 @@ import {
 const Sidebar = ({ collapsed, toggleSidebar }) => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
 
   const isActive = (path) => {
     return location.pathname.includes(path)
@@ -30,6 +41,9 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
     logout()
     navigate("/login")
   }
+
+  // Check if user has admin role
+  const isAdmin = user?.role === "SYSTEM_ADMIN" || user?.role === "MFI_ADMIN"
 
   return (
     <SidebarContainer collapsed={collapsed}>
@@ -45,7 +59,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
 
       <MenuSection>
         <MenuLabel collapsed={collapsed}>Main</MenuLabel>
-        <MenuItem to="/dashboard" active={isActive("/dashboard")} collapsed={collapsed}>
+        <MenuItem to="/dashboard" active={location.pathname === "/dashboard"} collapsed={collapsed}>
           <FaHome />
           <MenuText collapsed={collapsed}>Dashboard</MenuText>
         </MenuItem>
@@ -57,12 +71,36 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
           <FaMoneyBillWave />
           <MenuText collapsed={collapsed}>Loans</MenuText>
         </MenuItem>
+        <MenuItem to="/dashboard/credit-history" active={isActive("/credit-history")} collapsed={collapsed}>
+          <FaHistory />
+          <MenuText collapsed={collapsed}>Credit History</MenuText>
+        </MenuItem>
+        <MenuItem to="/dashboard/repayments" active={isActive("/repayments")} collapsed={collapsed}>
+          <FaCalendarAlt />
+          <MenuText collapsed={collapsed}>Repayments</MenuText>
+        </MenuItem>
 
         <MenuLabel collapsed={collapsed}>Reports</MenuLabel>
-        <MenuItem to="/dashboard/reports" active={isActive("/reports")} collapsed={collapsed}>
+        <MenuItem to="/dashboard/analytics" active={isActive("/analytics")} collapsed={collapsed}>
           <FaChartLine />
           <MenuText collapsed={collapsed}>Analytics</MenuText>
         </MenuItem>
+
+        {isAdmin && (
+          <>
+            <MenuLabel collapsed={collapsed}>Administration</MenuLabel>
+            <MenuItem to="/dashboard/users" active={isActive("/users")} collapsed={collapsed}>
+              <FaUserCog />
+              <MenuText collapsed={collapsed}>User Management</MenuText>
+            </MenuItem>
+            {user?.role === "SYSTEM_ADMIN" && (
+              <MenuItem to="/dashboard/mfis" active={isActive("/mfis")} collapsed={collapsed}>
+                <FaBuilding />
+                <MenuText collapsed={collapsed}>MFI Management</MenuText>
+              </MenuItem>
+            )}
+          </>
+        )}
 
         <MenuLabel collapsed={collapsed}>Settings</MenuLabel>
         <MenuItem to="/dashboard/settings" active={isActive("/settings")} collapsed={collapsed}>

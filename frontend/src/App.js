@@ -10,6 +10,11 @@ import Dashboard from "./components/Dashboard"
 import Borrowers from "./pages/Borrowers"
 import Loans from "./pages/Loans"
 import LoanApplication from "./components/LoanApplication"
+import CreditHistory from "./pages/CreditHistory"
+import RepaymentTracking from "./pages/RepaymentTracking"
+import Analytics from "./pages/Analytics"
+import UserManagement from "./pages/UserManagement"
+import MFIManagement from "./pages/MFIManagement"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
 import Home from "./pages/Home"
@@ -75,6 +80,12 @@ const App = () => {
                       <Route path="/borrowers" element={<Borrowers />} />
                       <Route path="/loans" element={<Loans />} />
                       <Route path="/loans/new" element={<LoanApplication />} />
+                      <Route path="/credit-history" element={<CreditHistory />} />
+                      <Route path="/repayments" element={<RepaymentTracking />} />
+                      <Route path="/analytics" element={<Analytics />} />
+                      <Route path="/users" element={<UserManagement />} />
+                      <Route path="/mfis" element={<MFIManagement />} />
+                  
                     </Routes>
                   </PageContainer>
                 </AppContainer>
