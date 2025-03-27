@@ -1,18 +1,17 @@
-#users/views.py
-from django.shortcuts import render
-
-from django.contrib.auth.models import User
+# users/views.py
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import UserSerializer
+from users.models import User
+from .permissions import IsAdminUser, IsManagerOrAdmin
 
-#public view to register a new user
+# Public view: Only admins can register users
 class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.all()
-    permission_classes = [AllowAny]
+    #permission_classes = [IsAuthenticated, IsAdminUser]  # Only admins can create users
+    permission_classes = [AllowAny]  # Allow anyone to create users 
     serializer_class = UserSerializer
 
     def post(self, request, *args, **kwargs):
@@ -22,13 +21,21 @@ class RegisterUserView(generics.CreateAPIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-#protected view: only logged-in users can access their own profile
+# Protected: Only logged-in users can access their profile
 class UserProfileView(generics.RetrieveAPIView):
     queryset = User.objects.all()
-    permission_classes = [IsAuthenticated]  # Requires authentication
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
     def get(self, request, *args, **kwargs):
         serializer = self.serializer_class(request.user)
         return Response(serializer.data)
+
+# Protected: Only managers & admins can access this view
+class ManagerOnlyView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
+
+    def get_queryset(self):
+        return User.objects.all()
