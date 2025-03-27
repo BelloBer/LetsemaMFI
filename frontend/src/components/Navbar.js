@@ -1,5 +1,10 @@
-import { FaBell, FaUserCircle, FaSearch, FaEnvelope, FaCalendarAlt } from "react-icons/fa"
+"use client"
+
+import { useState } from "react"
+import { FaBell, FaUserCircle, FaSearch, FaEnvelope, FaCalendarAlt, FaSignOutAlt, FaCog, FaUser } from "react-icons/fa"
 import styled from "styled-components"
+import { useAuth } from "../context/AuthContext"
+import { useNavigate } from "react-router-dom"
 
 const NavbarContainer = styled.nav`
   width: 100%;
@@ -109,6 +114,7 @@ const UserProfile = styled.div`
   padding: 5px 10px;
   border-radius: 8px;
   transition: all 0.2s ease;
+  position: relative;
   
   &:hover {
     background: var(--background);
@@ -158,11 +164,64 @@ const DateDisplay = styled.div`
   }
 `
 
+const UserDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 200px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  padding: 10px 0;
+  z-index: 100;
+  margin-top: 10px;
+  opacity: ${(props) => (props.isOpen ? 1 : 0)};
+  visibility: ${(props) => (props.isOpen ? "visible" : "hidden")};
+  transform: ${(props) => (props.isOpen ? "translateY(0)" : "translateY(-10px)")};
+  transition: all 0.3s ease;
+`
+
+const DropdownItem = styled.div`
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:hover {
+    background: var(--background);
+    color: var(--primary);
+  }
+  
+  svg {
+    font-size: 16px;
+    color: var(--text-light);
+  }
+`
+
+const DropdownDivider = styled.div`
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+`
+
 const Navbar = ({ sidebarCollapsed }) => {
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
   // Get current date
   const today = new Date()
   const options = { weekday: "long", year: "numeric", month: "long", day: "numeric" }
   const formattedDate = today.toLocaleDateString("en-US", options)
+
+  const handleLogout = () => {
+    logout()
+    navigate("/login")
+  }
 
   return (
     <NavbarContainer sidebarCollapsed={sidebarCollapsed}>
@@ -189,14 +248,30 @@ const Navbar = ({ sidebarCollapsed }) => {
           <NotificationBadge>5</NotificationBadge>
         </IconButton>
 
-        <UserProfile>
+        <UserProfile onClick={() => setDropdownOpen(!dropdownOpen)}>
           <UserAvatar>
             <FaUserCircle />
           </UserAvatar>
           <UserInfo>
-            <UserName>John Doe</UserName>
-            <UserRole>Administrator</UserRole>
+            <UserName>{user?.username || "John Doe"}</UserName>
+            <UserRole>{user?.role || "Administrator"}</UserRole>
           </UserInfo>
+
+          <UserDropdown isOpen={dropdownOpen}>
+            <DropdownItem>
+              <FaUser />
+              My Profile
+            </DropdownItem>
+            <DropdownItem>
+              <FaCog />
+              Settings
+            </DropdownItem>
+            <DropdownDivider />
+            <DropdownItem onClick={handleLogout}>
+              <FaSignOutAlt />
+              Logout
+            </DropdownItem>
+          </UserDropdown>
         </UserProfile>
       </NavItems>
     </NavbarContainer>

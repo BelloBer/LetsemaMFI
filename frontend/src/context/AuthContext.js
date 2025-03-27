@@ -1,78 +1,147 @@
-//srs/context/AuthContext.js
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+"use client"
 
-const AuthContext = createContext();
+// src/context/AuthContext.js
+import { createContext, useContext, useEffect, useState, useRef } from "react"
+import axios from "axios"
+
+const AuthContext = createContext()
+
+// Create API instance outside the component to prevent recreation on each render
+const createApi = (token) => {
+  const instance = axios.create({
+    baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000",
+    headers: {
+      Authorization: token ? `Bearer ${token}` : undefined,
+    },
+  })
+
+  // Set up request interceptor
+  instance.interceptors.request.use(
+    (config) => {
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+      return config
+    },
+    (error) => Promise.reject(error),
+  )
+
+  // Set up response interceptor
+  instance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        // Only logout if not trying to login
+        if (!error.config.url.includes("token")) {
+          localStorage.removeItem("token")
+          // Don't redirect here to avoid potential loops
+        }
+      }
+      return Promise.reject(error)
+    },
+  )
+
+  return instance
+}
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [user, setUser] = useState(null)
+  const [token, setToken] = useState(localStorage.getItem("token"))
+  const [loading, setLoading] = useState(true)
+  const apiRef = useRef(createApi(token))
+  const fetchingRef = useRef(false)
 
-  const api = axios.create({
-    baseURL: process.env.REACT_APP_API_URL,
-    headers: {
-      'Authorization': token ? `Bearer ${token}` : undefined
+  // Update API instance when token changes
+  useEffect(() => {
+    apiRef.current = createApi(token)
+  }, [token])
+
+  const fetchUser = async () => {
+    // Prevent concurrent fetches
+    if (fetchingRef.current || !token) {
+      setLoading(false)
+      return
     }
-  });
 
-  const fetchUser = useCallback(async () => {
+    fetchingRef.current = true
+
     try {
-      const response = await api.get('/api/users/profile/');
-      setUser(response.data);
+      const response = await apiRef.current.get("/api/users/profile/")
+      setUser(response.data)
     } catch (error) {
-      logout();
+      console.error("Error fetching user profile:", error)
+      // Only logout if it's a 401 error
+      if (error.response?.status === 401) {
+        logout()
+      }
+    } finally {
+      setLoading(false)
+      fetchingRef.current = false
     }
-  }, [api]);
+  }
 
   const login = async (credentials) => {
     try {
-      const apiUrl = process.env.REACT_APP_API_URL;
-      if (!apiUrl) throw new Error("API URL not configured");
-      
+      const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000"
+
       const response = await axios.post(`${apiUrl}/api/users/token/`, credentials, {
         headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      localStorage.setItem('token', response.data.access);
-      setToken(response.data.access);
-      
+          "Content-Type": "application/json",
+        },
+      })
+
+      const accessToken = response.data.access
+      localStorage.setItem("token", accessToken)
+      setToken(accessToken)
+
       // Fetch user profile
       const profile = await axios.get(`${apiUrl}/api/users/profile/`, {
         headers: {
-          'Authorization': `Bearer ${response.data.access}`
-        }
-      });
-      
-      setUser(profile.data);
-      return response.data;
+          Authorization: `Bearer ${accessToken}`,
+        },
+      })
+
+      setUser(profile.data)
+      return response.data
     } catch (error) {
-      console.error('Auth error:', error);
-      const errorData = error.response?.data || { detail: 'Login failed' };
-      throw errorData;
+      console.error("Auth error:", error)
+      const errorData = error.response?.data || { detail: "Login failed" }
+      throw errorData
     }
-  };
+  }
 
-  const logout = (navigate) => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-    if (navigate) navigate('/login');
-  };
+  const logout = () => {
+    localStorage.removeItem("token")
+    setToken(null)
+    setUser(null)
+  }
 
+  // Only fetch user once when component mounts or token changes
   useEffect(() => {
     if (token) {
-      api.defaults.headers['Authorization'] = `Bearer ${token}`;
-      fetchUser();
+      fetchUser()
+    } else {
+      setLoading(false)
     }
-  }, [token, api, fetchUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token])
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, api }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        api: apiRef.current,
+        loading,
+        refetchUser: fetchUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext)
+

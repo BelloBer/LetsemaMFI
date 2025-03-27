@@ -19,6 +19,16 @@ const GlobalStyles = createGlobalStyle`
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
+    
+    /* New variables for enhanced styling */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
   }
 
   * {
@@ -62,22 +72,43 @@ const GlobalStyles = createGlobalStyle`
   a {
     color: inherit;
     text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+  
+  a:hover {
+    color: var(--primary);
   }
 
   button {
     cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  
+  input, select, textarea {
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+  }
+  
+  input:focus, select:focus, textarea:focus {
+    outline: none;
   }
 
   .page-container {
-    transition: margin-left 0.3s ease-in-out;
+    transition: margin-left var(--transition-normal);
   }
 
   .card {
     background: var(--card-bg);
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
     padding: 1.5rem;
     margin-bottom: 1.5rem;
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  }
+  
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
   }
 
   .badge {
@@ -101,6 +132,92 @@ const GlobalStyles = createGlobalStyle`
   .badge-danger {
     background-color: rgba(239, 68, 68, 0.1);
     color: var(--danger);
+  }
+  
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  /* Utility classes */
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease forwards;
+  }
+  
+  .animate-slideUp {
+    animation: slideUp 0.5s ease forwards;
+  }
+  
+  .animate-pulse {
+    animation: pulse 2s infinite;
+  }
+  
+  .text-center {
+    text-align: center;
+  }
+  
+  .flex {
+    display: flex;
+  }
+  
+  .flex-col {
+    flex-direction: column;
+  }
+  
+  .items-center {
+    align-items: center;
+  }
+  
+  .justify-center {
+    justify-content: center;
+  }
+  
+  .justify-between {
+    justify-content: space-between;
+  }
+  
+  .gap-2 {
+    gap: 0.5rem;
+  }
+  
+  .gap-4 {
+    gap: 1rem;
+  }
+  
+  .w-full {
+    width: 100%;
+  }
+  
+  .h-full {
+    height: 100%;
+  }
+  
+  .p-4 {
+    padding: 1rem;
+  }
+  
+  .m-4 {
+    margin: 1rem;
+  }
+  
+  .rounded {
+    border-radius: var(--radius-md);
+  }
+  
+  .shadow {
+    box-shadow: var(--shadow-md);
   }
 `
 

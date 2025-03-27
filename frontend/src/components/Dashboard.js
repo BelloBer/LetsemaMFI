@@ -1,3 +1,5 @@
+"use client"
+
 import styled from "styled-components"
 import {
   FaUsers,
@@ -8,6 +10,7 @@ import {
   FaArrowDown,
   FaEllipsisH,
 } from "react-icons/fa"
+import { useAuth } from "../context/AuthContext"
 
 const DashboardContainer = styled.div`
   padding: 90px 30px 30px;
@@ -44,7 +47,7 @@ const StatCard = styled.div`
   display: flex;
   flex-direction: column;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  
+
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
@@ -109,7 +112,7 @@ const GridContainer = styled.div`
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
-  
+
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
@@ -139,7 +142,7 @@ const CardAction = styled.button`
   border: none;
   color: var(--text-light);
   cursor: pointer;
-  
+
   &:hover {
     color: var(--primary);
   }
@@ -216,7 +219,7 @@ const PaymentItem = styled.div`
   justify-content: space-between;
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -243,27 +246,29 @@ const PaymentAmount = styled.div`
 `
 
 const Dashboard = () => {
-  // Sample data for recent loans
+  const { user } = useAuth()
+
+  // Sample data for recent loans with Sesotho names and Maloti currency
   const recentLoans = [
-    { id: "L-2023-001", borrower: "John Smith", amount: "$5,000", date: "2023-05-15", status: "Approved" },
-    { id: "L-2023-002", borrower: "Sarah Johnson", amount: "$8,500", date: "2023-05-14", status: "Pending" },
-    { id: "L-2023-003", borrower: "Michael Brown", amount: "$3,200", date: "2023-05-12", status: "Approved" },
-    { id: "L-2023-004", borrower: "Emily Davis", amount: "$10,000", date: "2023-05-10", status: "Rejected" },
-    { id: "L-2023-005", borrower: "Robert Wilson", amount: "$7,500", date: "2023-05-08", status: "Approved" },
+    { id: "L-2023-001", borrower: "Thabo Mokoena", amount: "M5,000", date: "2023-05-15", status: "Approved" },
+    { id: "L-2023-002", borrower: "Lineo Mphutlane", amount: "M8,500", date: "2023-05-14", status: "Pending" },
+    { id: "L-2023-003", borrower: "Teboho Letsie", amount: "M3,200", date: "2023-05-12", status: "Approved" },
+    { id: "L-2023-004", borrower: "Palesa Mokete", amount: "M10,000", date: "2023-05-10", status: "Rejected" },
+    { id: "L-2023-005", borrower: "Tumelo Ramokoatsi", amount: "M7,500", date: "2023-05-08", status: "Approved" },
   ]
 
   // Sample data for upcoming payments
   const upcomingPayments = [
-    { borrower: "John Smith", date: "May 25, 2023", amount: "$450" },
-    { borrower: "Michael Brown", date: "May 28, 2023", amount: "$320" },
-    { borrower: "Robert Wilson", date: "June 1, 2023", amount: "$680" },
-    { borrower: "Lisa Thompson", date: "June 3, 2023", amount: "$550" },
+    { borrower: "Thabo Mokoena", date: "May 25, 2023", amount: "M450" },
+    { borrower: "Teboho Letsie", date: "May 28, 2023", amount: "M320" },
+    { borrower: "Tumelo Ramokoatsi", date: "June 1, 2023", amount: "M680" },
+    { borrower: "Nthabiseng Motaung", date: "June 3, 2023", amount: "M550" },
   ]
 
   return (
     <DashboardContainer>
       <PageHeader>
-        <WelcomeMessage>Welcome back, John!</WelcomeMessage>
+        <WelcomeMessage>Welcome back, {user?.username || "Mohlomphehi"}!</WelcomeMessage>
         <SubHeading>Here's what's happening with your loan portfolio today.</SubHeading>
       </PageHeader>
 
@@ -309,7 +314,7 @@ const Dashboard = () => {
               <FaChartLine />
             </StatIcon>
           </StatHeader>
-          <StatValue>$1.2M</StatValue>
+          <StatValue>M1.2M</StatValue>
           <StatFooter>
             <StatChange isPositive={true}>
               <FaArrowUp style={{ marginRight: "4px" }} />

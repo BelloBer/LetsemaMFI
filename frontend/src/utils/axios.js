@@ -1,30 +1,32 @@
-//src/utils/axios.js
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+// src/utils/axios.js
+import axios from "axios"
 
+// Create a base API instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL
-});
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000",
+})
 
 // Add request interceptor
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token")
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error),
+)
 
 // Add response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response.status === 401) {
-      const { logout } = useAuth();
-      logout();
-    }
-    return Promise.reject(error);
-  }
-);
+    // Don't handle auth errors here to avoid circular dependencies
+    // Let the components handle their own auth errors
+    return Promise.reject(error)
+  },
+)
 
-export default api;
+export default api
+

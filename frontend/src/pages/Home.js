@@ -1,5 +1,3 @@
-
-
 import { Link } from "react-router-dom"
 import styled from "styled-components"
 import { FaChartLine, FaUsers, FaMoneyBillWave, FaShieldAlt, FaArrowRight } from "react-icons/fa"
@@ -512,10 +510,10 @@ const HomePage = () => {
               insights that help us make better decisions."
             </TestimonialText>
             <TestimonialAuthor>
-              <AuthorAvatar>JD</AuthorAvatar>
+              <AuthorAvatar>TM</AuthorAvatar>
               <AuthorInfo>
-                <AuthorName>John Doe</AuthorName>
-                <AuthorRole>CEO, Finance Solutions</AuthorRole>
+                <AuthorName>Thabo Mokoena</AuthorName>
+                <AuthorRole>CEO, Basotho Finance Solutions</AuthorRole>
               </AuthorInfo>
             </TestimonialAuthor>
           </TestimonialCard>
@@ -525,10 +523,10 @@ const HomePage = () => {
               seen a 30% increase in repeat business."
             </TestimonialText>
             <TestimonialAuthor>
-              <AuthorAvatar>SJ</AuthorAvatar>
+              <AuthorAvatar>LM</AuthorAvatar>
               <AuthorInfo>
-                <AuthorName>Sarah Johnson</AuthorName>
-                <AuthorRole>Operations Manager, LendWell</AuthorRole>
+                <AuthorName>Lineo Mphutlane</AuthorName>
+                <AuthorRole>Operations Manager, Khoebo Loans</AuthorRole>
               </AuthorInfo>
             </TestimonialAuthor>
           </TestimonialCard>
@@ -538,10 +536,10 @@ const HomePage = () => {
               business instead of paperwork."
             </TestimonialText>
             <TestimonialAuthor>
-              <AuthorAvatar>MB</AuthorAvatar>
+              <AuthorAvatar>TL</AuthorAvatar>
               <AuthorInfo>
-                <AuthorName>Michael Brown</AuthorName>
-                <AuthorRole>Director, Quick Loans Inc.</AuthorRole>
+                <AuthorName>Teboho Letsie</AuthorName>
+                <AuthorRole>Director, Potlako Loans Inc.</AuthorRole>
               </AuthorInfo>
             </TestimonialAuthor>
           </TestimonialCard>

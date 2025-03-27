@@ -1,120 +1,226 @@
-//src/pages/Login.js
-import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
+"use client"
+
+// src/pages/Login.js
+import { useState } from "react"
+import { useAuth } from "../context/AuthContext"
+import { useNavigate, Link } from "react-router-dom"
+import styled from "styled-components"
+import { FaUser, FaLock, FaSignInAlt } from "react-icons/fa"
+
+const LoginWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  padding: 20px;
+`
 
 const LoginContainer = styled.div`
-  max-width: 400px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-`;
+  max-width: 450px;
+  width: 100%;
+  padding: 2.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-in-out;
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`
+
+const Logo = styled.div`
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+  text-align: center;
+  margin-bottom: 10px;
+  
+  span {
+    color: var(--text);
+  }
+`
 
 const Title = styled.h2`
-  color: #2c3e50;
+  color: var(--text);
   text-align: center;
-  margin-bottom: 1.5rem;
-`;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+`
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-`;
+  gap: 1.25rem;
+`
+
+const FormGroup = styled.div`
+  position: relative;
+`
 
 const Input = styled.input`
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  width: 100%;
+  padding: 1rem 1rem 1rem 3rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-size: 1rem;
+  transition: all 0.3s ease;
+  
   &:focus {
     outline: none;
-    border-color: #3498db;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
   }
-`;
+`
+
+const InputIcon = styled.div`
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-light);
+  font-size: 1.2rem;
+`
 
 const Button = styled.button`
-  padding: 0.75rem;
-  background-color: ${({ disabled }) => (disabled ? '#bdc3c7' : '#3498db')};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 1rem;
+  background-color: var(--primary);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 1rem;
-  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
-  transition: background-color 0.3s;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 0.5rem;
+  
   &:hover {
-    background-color: ${({ disabled }) => (disabled ? '#bdc3c7' : '#2980b9')};
+    background-color: var(--primary-dark);
   }
-`;
+  
+  &:disabled {
+    background-color: var(--text-light);
+    cursor: not-allowed;
+  }
+`
 
 const ErrorMessage = styled.div`
-  padding: 0.75rem;
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
+  padding: 1rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border-radius: 8px;
   margin-bottom: 1rem;
   text-align: center;
-`;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const RegisterLink = styled.div`
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-light);
+  
+  a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`
 
 const Login = () => {
   const [credentials, setCredentials] = useState({
-    username: '',
-    password: '',
-  });
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
+    username: "",
+    password: "",
+  })
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-  
+    e.preventDefault()
+
     if (!credentials.username || !credentials.password) {
-      setError('Please fill in both fields');
-      return;
+      setError("Please fill in both fields")
+      return
     }
-  
-    setLoading(true);
-    setError(null);
-  
+
+    setLoading(true)
+    setError(null)
+
     try {
-      await login(credentials);
-      navigate('/dashboard'); // Make sure this matches your route
+      await login(credentials)
+      navigate("/dashboard")
     } catch (err) {
-      console.error('Login error:', err); // Add logging
-      setError(err.detail || err.message || 'Login failed. Please try again.');
+      console.error("Login error:", err)
+      setError(err.detail || err.message || "Login failed. Please try again.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <LoginContainer>
-      <Title>Letsema Login</Title>
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-      <Form onSubmit={handleSubmit}>
-        <Input
-          type="text"
-          placeholder="Username"
-          value={credentials.username}
-          onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-        />
-        <Input
-          type="password"
-          placeholder="Password"
-          value={credentials.password}
-          onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-        />
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
-        </Button>
-      </Form>
-    </LoginContainer>
-  );
-};
+    <LoginWrapper>
+      <LoginContainer>
+        <Logo>
+          Letsema<span>.</span>
+        </Logo>
+        <Title>Sign in to your account</Title>
 
-export default Login;
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+
+        <Form onSubmit={handleSubmit}>
+          <FormGroup>
+            <InputIcon>
+              <FaUser />
+            </InputIcon>
+            <Input
+              type="text"
+              placeholder="Username"
+              value={credentials.username}
+              onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <InputIcon>
+              <FaLock />
+            </InputIcon>
+            <Input
+              type="password"
+              placeholder="Password"
+              value={credentials.password}
+              onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+            />
+          </FormGroup>
+
+          <Button type="submit" disabled={loading}>
+            {loading ? "Signing in..." : "Sign In"}
+            {!loading && <FaSignInAlt />}
+          </Button>
+        </Form>
+
+        <RegisterLink>
+          Don't have an account? <Link to="/register">Register now</Link>
+        </RegisterLink>
+      </LoginContainer>
+    </LoginWrapper>
+  )
+}
+
+export default Login
+
