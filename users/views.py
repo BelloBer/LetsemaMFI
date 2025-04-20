@@ -1,36 +1,96 @@
-#users/views.py
+
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .serializers import UserRegistrationSerializer, UserSerializer
-from .permissions import CanRegisterUsers
-from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from .models import User, Borrower
+from .models import MFI
+# from .serializers import MFISerializer 
+from .serializers import (
+    StaffRegistrationSerializer,
+    BorrowerRegistrationSerializer,
+    UserProfileSerializer,
+    BorrowerLoginSerializer
+)
+from .permissions import AllowAny, BasicAuthPermission
 
-
-
-class RegisterUserView(generics.CreateAPIView):
-    serializer_class = UserRegistrationSerializer
-    permission_classes = [CanRegisterUsers]
-
-    def create(self, request, *args, **kwargs):
+class RegisterStaffView(generics.CreateAPIView):
+    serializer_class = StaffRegistrationSerializer
+    permission_classes = [AllowAny]
+    
+    def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        user = serializer.save()
         
-        # For MFI staff, automatically assign the new user to their MFI
-        if request.user.role in ['MFI_ADMIN', 'LOAN_OFFICER']:
-            serializer.validated_data['mfi'] = request.user.mfi
-            
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-    
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "user": serializer.data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
 
+class RegisterBorrowerView(generics.CreateAPIView):
+    serializer_class = BorrowerRegistrationSerializer
+    permission_classes = [AllowAny]
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        borrower = serializer.save()
+
+        refresh = RefreshToken.for_user(borrower.user)
+        return Response({
+            "message": "Borrower registered successfully",
+            "borrower_id": str(borrower.borrower_id),
+            "user_id": borrower.user.id,
+            "username": borrower.user.username,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        }, status=status.HTTP_201_CREATED)
+
+class BorrowerLoginView(generics.GenericAPIView):
+    serializer_class = BorrowerLoginSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 class UserProfileView(generics.RetrieveAPIView):
-    """
-    View for users to see their own profile
-    """
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = UserProfileSerializer
+    permission_classes = [BasicAuthPermission]
 
     def get_object(self):
         return self.request.user
+    
+
+
+# class MFIListView(generics.ListAPIView):
+#     """
+#     API endpoint that lists all MFIs
+#     """
+#     queryset = MFI.objects.all()
+#     serializer_class = MFISerializer
+#     permission_classes = [AllowAny]  # Or your preferred permission
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

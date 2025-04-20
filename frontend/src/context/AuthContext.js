@@ -1,147 +1,129 @@
+
 "use client"
 
 // src/context/AuthContext.js
-import { createContext, useContext, useEffect, useState, useRef } from "react"
-import axios from "axios"
+import { createContext, useContext, useState, useEffect, useRef } from "react"
+import { loginBorrower, loginStaff, refreshToken, getUserProfile, createAuthenticatedApi } from "../services/auth"
 
 const AuthContext = createContext()
 
-// Create API instance outside the component to prevent recreation on each render
-const createApi = (token) => {
-  const instance = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || "http://localhost:8000",
-    headers: {
-      Authorization: token ? `Bearer ${token}` : undefined,
-    },
-  })
-
-  // Set up request interceptor
-  instance.interceptors.request.use(
-    (config) => {
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
-      return config
-    },
-    (error) => Promise.reject(error),
-  )
-
-  // Set up response interceptor
-  instance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response?.status === 401) {
-        // Only logout if not trying to login
-        if (!error.config.url.includes("token")) {
-          localStorage.removeItem("token")
-          // Don't redirect here to avoid potential loops
-        }
-      }
-      return Promise.reject(error)
-    },
-  )
-
-  return instance
+export const useAuth = () => {
+  return useContext(AuthContext)
 }
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(localStorage.getItem("token"))
   const [loading, setLoading] = useState(true)
-  const apiRef = useRef(createApi(token))
-  const fetchingRef = useRef(false)
+  const [error, setError] = useState(null)
+  const refreshIntervalRef = useRef(null)
 
-  // Update API instance when token changes
   useEffect(() => {
-    apiRef.current = createApi(token)
-  }, [token])
-
-  const fetchUser = async () => {
-    // Prevent concurrent fetches
-    if (fetchingRef.current || !token) {
-      setLoading(false)
-      return
+    const storedUser = JSON.parse(localStorage.getItem("user"))
+    if (storedUser) {
+      setUser(storedUser)
+      setupTokenRefresh(storedUser.refresh)
     }
+    setLoading(false)
 
-    fetchingRef.current = true
-
-    try {
-      const response = await apiRef.current.get("/api/users/profile/")
-      setUser(response.data)
-    } catch (error) {
-      console.error("Error fetching user profile:", error)
-      // Only logout if it's a 401 error
-      if (error.response?.status === 401) {
-        logout()
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current)
       }
-    } finally {
-      setLoading(false)
-      fetchingRef.current = false
     }
+  }, [])
+
+  const setupTokenRefresh = (refreshTokenValue) => {
+    // Clear any existing interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current)
+    }
+
+    // Set up a new interval
+    refreshIntervalRef.current = setInterval(
+      async () => {
+        try {
+          const tokens = await refreshToken(refreshTokenValue)
+
+          // Update user with new tokens
+          setUser((prevUser) => {
+            const updatedUser = {
+              ...prevUser,
+              access: tokens.access,
+              refresh: tokens.refresh,
+            }
+            localStorage.setItem("user", JSON.stringify(updatedUser))
+            return updatedUser
+          })
+        } catch (err) {
+          console.error("Token refresh failed:", err)
+          logout()
+        }
+      },
+      4 * 60 * 1000,
+    ) // Refresh every 4 minutes
   }
 
-  const login = async (credentials) => {
+  const login = async (username, password, isStaff = false) => {
+    setError(null)
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000"
+      const loginFunction = isStaff ? loginStaff : loginBorrower
+      const userData = await loginFunction(username, password)
 
-      const response = await axios.post(`${apiUrl}/api/users/token/`, credentials, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+      const user = {
+        ...userData,
+        isStaff,
+        username,
+      }
 
-      const accessToken = response.data.access
-      localStorage.setItem("token", accessToken)
-      setToken(accessToken)
-
-      // Fetch user profile
-      const profile = await axios.get(`${apiUrl}/api/users/profile/`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-
-      setUser(profile.data)
-      return response.data
-    } catch (error) {
-      console.error("Auth error:", error)
-      const errorData = error.response?.data || { detail: "Login failed" }
-      throw errorData
+      localStorage.setItem("user", JSON.stringify(user))
+      setUser(user)
+      setupTokenRefresh(userData.refresh)
+      return user
+    } catch (err) {
+      setError(err.message || "Login failed")
+      throw err
     }
   }
 
   const logout = () => {
-    localStorage.removeItem("token")
-    setToken(null)
+    localStorage.removeItem("user")
     setUser(null)
+
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current)
+      refreshIntervalRef.current = null
+    }
   }
 
-  // Only fetch user once when component mounts or token changes
-  useEffect(() => {
-    if (token) {
-      fetchUser()
-    } else {
-      setLoading(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
+  // Create an API instance with the current access token
+  const api = user ? createAuthenticatedApi(user.access) : null
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        login,
-        logout,
-        api: apiRef.current,
-        loading,
-        refetchUser: fetchUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isStaff: user?.isStaff || false,
+    role: user?.role || null,
+    login,
+    logout,
+    error,
+    loading,
+    api,
+    refetchUser: async () => {
+      if (user?.access) {
+        try {
+          const profile = await getUserProfile(user.access)
+          setUser((prev) => ({ ...prev, ...profile }))
+          return profile
+        } catch (err) {
+          console.error("Failed to fetch user profile:", err)
+          if (err.message.includes("401")) {
+            logout()
+          }
+          throw err
+        }
+      }
+    },
+  }
+
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>
 }
-
-export const useAuth = () => useContext(AuthContext)
-

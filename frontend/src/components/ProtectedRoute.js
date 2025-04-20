@@ -28,7 +28,7 @@ const Spinner = styled.div`
 `
 
 export const ProtectedRoute = ({ children, roles }) => {
-  const { user, loading } = useAuth()
+  const { isAuthenticated, user, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -39,14 +39,23 @@ export const ProtectedRoute = ({ children, roles }) => {
     )
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (roles && !roles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />
+  // Only check roles if they are specified
+  if (roles && roles.length > 0) {
+    // Get the user's role, ensuring it's case-insensitive
+    const userRole = user?.role?.toUpperCase() || ""
+
+    // Check if the user has one of the required roles (case-insensitive)
+    const hasRequiredRole = roles.some((role) => role.toUpperCase() === userRole)
+
+    if (!hasRequiredRole) {
+      console.log("Access denied: User role", userRole, "not in required roles", roles)
+      return <Navigate to="/unauthorized" replace />
+    }
   }
 
   return children
 }
-

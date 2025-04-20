@@ -3,7 +3,7 @@
 // src/pages/Register.js
 import { useState, useEffect } from "react"
 import { useAuth } from "../context/AuthContext"
-import { register } from "../services/auth"
+import { registerStaff } from "../services/auth"
 import { useNavigate, Link } from "react-router-dom"
 import styled from "styled-components"
 import { FaUser, FaEnvelope, FaLock, FaUserTag, FaBuilding, FaUserPlus } from "react-icons/fa"
@@ -171,7 +171,7 @@ const Register = () => {
     username: "",
     email: "",
     password: "",
-    role: "BORROWER",
+    role: "LOAN_OFFICER",
     mfi: "",
   })
   const [mfis, setMfis] = useState([])
@@ -182,10 +182,20 @@ const Register = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (user?.role === "SYSTEM_ADMIN") {
-      api.get("/api/mfis/").then((res) => setMfis(res.data))
+    // Only system admins or MFI admins can register staff
+    if (!user || (user.role !== "SYSTEM_ADMIN" && user.role !== "MFI_ADMIN")) {
+      navigate("/dashboard")
+      return
     }
-  }, [user, api])
+
+    // Fetch MFIs
+    if (api) {
+      api
+        .get(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/mfis/`)
+        .then((data) => setMfis(data))
+        .catch((err) => console.error("Failed to fetch MFIs:", err))
+    }
+  }, [user, api, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -194,14 +204,14 @@ const Register = () => {
     setSuccess(null)
 
     try {
-      await register(formData)
-      setSuccess("Registration successful! Redirecting...")
+      await registerStaff(formData)
+      setSuccess("Staff registered successfully!")
 
       setTimeout(() => {
-        navigate(user ? "/dashboard" : "/login")
+        navigate("/dashboard/users")
       }, 2000)
     } catch (err) {
-      setError(err.response?.data.detail || "Registration failed. Please try again.")
+      setError(err.message || "Registration failed. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -213,7 +223,7 @@ const Register = () => {
         <Logo>
           Letsema<span>.</span>
         </Logo>
-        <Title>Create your account</Title>
+        <Title>Register Staff Member</Title>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}
         {success && <SuccessMessage>{success}</SuccessMessage>}
@@ -263,48 +273,40 @@ const Register = () => {
             <InputIcon>
               <FaUserTag />
             </InputIcon>
-            <Select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              disabled={!user}
-            >
-              <option value="BORROWER">Borrower</option>
+            <Select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+              <option value="LOAN_OFFICER">Loan Officer</option>
               {user?.role === "SYSTEM_ADMIN" && (
                 <>
-                  <option value="LOAN_OFFICER">Loan Officer</option>
                   <option value="MFI_ADMIN">MFI Admin</option>
                   <option value="CREDIT_ANALYST">Credit Analyst</option>
-                  <option value="AUDITOR">Auditor</option>
                   <option value="SYSTEM_ADMIN">System Admin</option>
                 </>
               )}
             </Select>
           </FormGroup>
 
-          {user?.role === "SYSTEM_ADMIN" && (
-            <FormGroup>
-              <InputIcon>
-                <FaBuilding />
-              </InputIcon>
-              <Select value={formData.mfi} onChange={(e) => setFormData({ ...formData, mfi: e.target.value })}>
-                <option value="">Select MFI</option>
-                {mfis.map((mfi) => (
-                  <option key={mfi.id} value={mfi.id}>
-                    {mfi.name}
-                  </option>
-                ))}
-              </Select>
-            </FormGroup>
-          )}
+          <FormGroup>
+            <InputIcon>
+              <FaBuilding />
+            </InputIcon>
+            <Select value={formData.mfi} onChange={(e) => setFormData({ ...formData, mfi: e.target.value })} required>
+              <option value="">Select MFI</option>
+              {mfis.map((mfi) => (
+                <option key={mfi.mfi_id} value={mfi.mfi_id}>
+                  {mfi.name}
+                </option>
+              ))}
+            </Select>
+          </FormGroup>
 
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating Account..." : "Create Account"}
+            {isSubmitting ? "Registering..." : "Register Staff Member"}
             {!isSubmitting && <FaUserPlus />}
           </Button>
         </Form>
 
         <LoginLink>
-          Already have an account? <Link to="/login">Sign in</Link>
+          <Link to="/dashboard">Back to Dashboard</Link>
         </LoginLink>
       </RegisterContainer>
     </RegisterWrapper>
@@ -312,4 +314,3 @@ const Register = () => {
 }
 
 export default Register
-

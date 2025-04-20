@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useNavigate, Link } from "react-router-dom"
 import styled from "styled-components"
-import { FaUser, FaLock, FaSignInAlt } from "react-icons/fa"
+import { FaUser, FaLock, FaSignInAlt, FaUserTie } from "react-icons/fa"
 
 const LoginWrapper = styled.div`
   display: flex;
@@ -141,11 +141,38 @@ const RegisterLink = styled.div`
   }
 `
 
+const LoginTabs = styled.div`
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+`
+
+const LoginTab = styled.button`
+  flex: 1;
+  padding: 1rem;
+  background: ${(props) => (props.active ? "var(--primary)" : "transparent")};
+  color: ${(props) => (props.active ? "white" : "var(--text)")};
+  border: none;
+  border-bottom: 3px solid ${(props) => (props.active ? "var(--primary)" : "transparent")};
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  
+  &:hover {
+    background: ${(props) => (props.active ? "var(--primary)" : "rgba(8, 145, 178, 0.1)")};
+  }
+`
+
 const Login = () => {
   const [credentials, setCredentials] = useState({
     username: "",
     password: "",
   })
+  const [loginType, setLoginType] = useState("borrower") // "borrower" or "staff"
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
@@ -163,11 +190,21 @@ const Login = () => {
     setError(null)
 
     try {
-      await login(credentials)
-      navigate("/dashboard")
+      const isStaff = loginType === "staff"
+      const user = await login(credentials.username, credentials.password, isStaff)
+
+      console.log("Login successful, redirecting based on role:", user.role)
+
+      // Redirect based on user role
+      if (user.role === "BORROWER") {
+        navigate("/borrower/dashboard")
+      } else {
+        // For all staff roles (SYSTEM_ADMIN, MFI_ADMIN, LOAN_OFFICER, CREDIT_ANALYST)
+        navigate("/dashboard")
+      }
     } catch (err) {
       console.error("Login error:", err)
-      setError(err.detail || err.message || "Login failed. Please try again.")
+      setError(err.message || "Login failed. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -180,6 +217,15 @@ const Login = () => {
           Letsema<span>.</span>
         </Logo>
         <Title>Sign in to your account</Title>
+
+        <LoginTabs>
+          <LoginTab active={loginType === "borrower"} onClick={() => setLoginType("borrower")}>
+            <FaUser /> Borrower
+          </LoginTab>
+          <LoginTab active={loginType === "staff"} onClick={() => setLoginType("staff")}>
+            <FaUserTie /> Staff
+          </LoginTab>
+        </LoginTabs>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}
 
@@ -209,13 +255,19 @@ const Login = () => {
           </FormGroup>
 
           <Button type="submit" disabled={loading}>
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Signing in..." : `Sign In as ${loginType === "borrower" ? "Borrower" : "Staff"}`}
             {!loading && <FaSignInAlt />}
           </Button>
         </Form>
 
         <RegisterLink>
-          Don't have an account? <Link to="/register">Register now</Link>
+          {loginType === "borrower" ? (
+            <>
+              Don't have an account? <Link to="/register/borrower">Register as a borrower</Link>
+            </>
+          ) : (
+            <>Staff registration is managed by administrators</>
+          )}
         </RegisterLink>
       </LoginContainer>
     </LoginWrapper>
@@ -223,4 +275,3 @@ const Login = () => {
 }
 
 export default Login
-

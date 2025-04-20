@@ -18,9 +18,12 @@ import MFIManagement from "./pages/MFIManagement"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
 import Home from "./pages/Home"
-import { AuthProvider } from "./context/AuthContext"
+import { AuthProvider, useAuth } from "./context/AuthContext"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import GlobalStyles from "./styles/GlobalStyles"
+import BorrowerRegistrationPage from "./pages/BorrowerRegistrationPage"
+import BorrowerRoutes from "./pages/borrower/BorrowerRoutes"
+import Unauthorized from "./pages/Unauthorized"
 
 const AppContainer = styled.div`
   display: flex;
@@ -41,6 +44,27 @@ const AuthContainer = styled.div`
   min-height: 100vh;
   background-color: #f5f7fa;
 `
+
+// Component to redirect users based on their role
+const RoleBasedRedirect = () => {
+  const { user, isAuthenticated, loading } = useAuth()
+
+  if (loading) {
+    return <div>Loading...</div>
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  // Redirect based on user role
+  if (user.role === "BORROWER") {
+    return <Navigate to="/borrower/dashboard" replace />
+  } else {
+    // For all staff roles
+    return <Navigate to="/dashboard" replace />
+  }
+}
 
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -70,7 +94,7 @@ const App = () => {
           <Route
             path="/dashboard/*"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute roles={["SYSTEM_ADMIN", "MFI_ADMIN", "LOAN_OFFICER", "CREDIT_ANALYST"]}>
                 <AppContainer>
                   <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
                   <PageContainer style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}>
@@ -85,11 +109,27 @@ const App = () => {
                       <Route path="/analytics" element={<Analytics />} />
                       <Route path="/users" element={<UserManagement />} />
                       <Route path="/mfis" element={<MFIManagement />} />
-                  
+                      <Route path="/register-staff" element={<Register />} />
                     </Routes>
                   </PageContainer>
                 </AppContainer>
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/borrower/*"
+            element={
+              <ProtectedRoute roles={["BORROWER"]}>
+                <BorrowerRoutes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/register/borrower"
+            element={
+              <AuthContainer>
+                <BorrowerRegistrationPage />
+              </AuthContainer>
             }
           />
           <Route
@@ -100,15 +140,9 @@ const App = () => {
               </AuthContainer>
             }
           />
-          <Route
-            path="/register"
-            element={
-              <AuthContainer>
-                <Register />
-              </AuthContainer>
-            }
-          />
-          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          {/* Add a role-based redirect for the root path */}
+          <Route path="/" element={<RoleBasedRedirect />} />
         </Routes>
       </AuthProvider>
     </Router>
@@ -116,4 +150,3 @@ const App = () => {
 }
 
 export default App
-
