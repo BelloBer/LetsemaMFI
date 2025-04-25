@@ -54,7 +54,7 @@ const RoleBasedRedirect = () => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/home" replace />
   }
 
   // Redirect based on user role
@@ -89,6 +89,7 @@ const App = () => {
     <Router>
       <GlobalStyles />
       <AuthProvider>
+      
         <Routes>
           <Route path="/home" element={<Home />} />
           <Route

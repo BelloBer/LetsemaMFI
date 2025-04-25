@@ -415,7 +415,7 @@ const HomePage = () => {
           </NavLinks>
           <AuthButtons>
             <LoginButton to="/login">Login</LoginButton>
-            <RegisterButton to="/register">Register</RegisterButton>
+            <RegisterButton to="/register/borrower">Register</RegisterButton>
           </AuthButtons>
         </HeaderContent>
       </Header>
@@ -493,7 +493,7 @@ const HomePage = () => {
           <CTADescription>
             Join thousands of businesses that have streamlined their loan operations with Letsema.
           </CTADescription>
-          <CTAButton to="/register">
+          <CTAButton to="/register/borrower">
             Get Started Today <FaArrowRight />
           </CTAButton>
         </CTAContent>
