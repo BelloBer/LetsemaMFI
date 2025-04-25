@@ -18,7 +18,8 @@ from .views import (
     RegisterBorrowerView,
     BorrowerLoginView,
     UserProfileView,
-
+    BorrowerProfileView,
+    ActiveMFIListView
 )
 
 urlpatterns = [
@@ -34,7 +35,8 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token-obtain'),
     # Protected URLs
     path('profile/', UserProfileView.as_view(), name='user-profile'),
-
+    path('profile/borrower/', BorrowerProfileView.as_view(), name='user-profile-borrower'),
+    path('mfis/active/', ActiveMFIListView.as_view(), name='mfi-list'),
     # path('api/users/mfis/', MFIListView.as_view(), name='mfi-list'),
 ]
 

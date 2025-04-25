@@ -280,7 +280,7 @@ const BorrowerDashboard = () => {
       setLoading(true)
       try {
         // Fetch borrower profile
-        const borrowerProfile = await api.get(`${process.env.REACT_APP_API_URL}/api/borrowers/profile/`)
+        const borrowerProfile = await api.get(`${process.env.REACT_APP_API_URL}/profile/borrower/`)
         setBorrowerInfo(borrowerProfile)
 
         // Fetch loans

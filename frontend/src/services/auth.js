@@ -80,7 +80,7 @@ export const loginStaff = async (username, password) => {
 
 // Token Refresh
 export const refreshToken = async (refreshToken) => {
-  const response = await fetch(`${API_URL}/api/users/token/refresh/`, {
+  const response = await fetch(`${API_URL}/token/refresh/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh: refreshToken }),

@@ -3,14 +3,18 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import User, Borrower
-from .models import MFI
+from .models import User, Borrower, MFI
+from rest_framework.permissions import IsAuthenticated
+
+
 # from .serializers import MFISerializer 
 from .serializers import (
     StaffRegistrationSerializer,
     BorrowerRegistrationSerializer,
     UserProfileSerializer,
-    BorrowerLoginSerializer
+    BorrowerLoginSerializer,
+    BorrowerProfileSerializer,
+    MFIListSerializer
 )
 from .permissions import AllowAny, BasicAuthPermission
 
@@ -66,6 +70,48 @@ class UserProfileView(generics.RetrieveAPIView):
         return self.request.user
     
 
+
+class BorrowerProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = BorrowerProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        try:
+            return Borrower.objects.get(user=self.request.user)
+        except Borrower.DoesNotExist:
+            return Response(
+                {"detail": "Borrower profile not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            self.perform_update(serializer)
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+    
+
+
+
+class ActiveMFIListView(generics.ListAPIView):
+    serializer_class = MFIListSerializer
+    
+    def get_queryset(self):
+        return MFI.objects.filter(is_active=True)
 
 # class MFIListView(generics.ListAPIView):
 #     """

@@ -1,3 +1,4 @@
+#users/models.py
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from dateutil.relativedelta import relativedelta
@@ -89,34 +90,34 @@ class Borrower(models.Model):
     def __str__(self):
         return f"{self.national_id} : (MFI: {self.mfi.name})"
 
-
-class Loan(models.Model):
-    STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('APPROVED', 'Approved'),
-        ('REJECTED', 'Rejected'),
-        ('REPAID', 'Repaid'),
-    ]
+############   migrated loans models to loans app  ############
+# class Loan(models.Model):
+#     STATUS_CHOICES = [
+#         ('PENDING', 'Pending'),
+#         ('APPROVED', 'Approved'),
+#         ('REJECTED', 'Rejected'),
+#         ('REPAID', 'Repaid'),
+#     ]
     
-    loan_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    borrower = models.ForeignKey(Borrower, on_delete=models.PROTECT)
-    mfi = models.ForeignKey(MFI, on_delete=models.PROTECT)
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    issued_date = models.DateTimeField(auto_now_add=True)
-    due_date = models.DateTimeField(blank=True, null=True)
+#     loan_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     borrower = models.ForeignKey(Borrower, on_delete=models.PROTECT)
+#     mfi = models.ForeignKey(MFI, on_delete=models.PROTECT)
+#     amount = models.DecimalField(max_digits=15, decimal_places=2)
+#     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+#     issued_date = models.DateTimeField(auto_now_add=True)
+#     due_date = models.DateTimeField(blank=True, null=True)
 
-    term = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(60)])  # Loan term in months
-    interest = models.DecimalField(max_digits=15, decimal_places=3)
+#     term = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(60)])  # Loan term in months
+#     interest = models.DecimalField(max_digits=15, decimal_places=3)
 
-    def save(self, *args, **kwargs):
-        if not self.due_date:
-            # Use relativedelta to properly handle months
-            self.due_date = timezone.now() + relativedelta(months=self.term)
-        super().save(*args, **kwargs)    
+#     def save(self, *args, **kwargs):
+#         if not self.due_date:
+#             # Use relativedelta to properly handle months
+#             self.due_date = timezone.now() + relativedelta(months=self.term)
+#         super().save(*args, **kwargs)    
     
-    def __str__(self):
-        return f"Loan {self.loan_id} - {self.borrower.full_name}"
-
+#     def __str__(self):
+#         return f"Loan {self.loan_id} - {self.borrower.full_name}"
+###################  end of migrated loans models to loans app  ############
     
 

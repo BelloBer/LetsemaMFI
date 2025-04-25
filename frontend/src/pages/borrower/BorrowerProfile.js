@@ -150,7 +150,7 @@ const BorrowerProfile = () => {
   const [editing, setEditing] = useState(false)
   const [formData, setFormData] = useState({
     phone: "",
-    email: "",
+    email: user?.email || "",
     address: {
       street: "",
       city: "",
@@ -165,7 +165,7 @@ const BorrowerProfile = () => {
 
       setLoading(true)
       try {
-        const profileData = await api.get(`${process.env.REACT_APP_API_URL}/api/borrowers/profile/`)
+        const profileData = await api.get(`${process.env.REACT_APP_API_URL}/profile/borrower/`)
         setProfile(profileData)
         setFormData({
           phone: profileData.phone || "",
@@ -240,7 +240,7 @@ const BorrowerProfile = () => {
   const handleSubmit = async () => {
     try {
       // Submit updated profile to API
-      await api.put(`${process.env.REACT_APP_API_URL}/api/borrowers/profile/update/`, formData)
+      await api.put(`${process.env.REACT_APP_API_URL}/profile/borrower/`, formData)
 
       // Update local profile state
       setProfile((prev) => ({
@@ -358,7 +358,9 @@ const BorrowerProfile = () => {
                   placeholder="your.email@example.com"
                 />
               ) : (
-                <ProfileValue>{user?.email || "Not provided"}</ProfileValue>
+               <ProfileValue>
+                {profile?.email || user?.email || "Not provided"}
+              </ProfileValue>
               )}
             </ProfileItem>
             <ProfileItem>
