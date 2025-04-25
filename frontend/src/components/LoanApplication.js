@@ -343,15 +343,15 @@ const LoanApplication = () => {
           <SectionTitle>Review & Submit</SectionTitle>
           <div className="review-summary">
             <p>Please review all information before submitting the loan application.</p>
-            {/* Summary of entered information would go here */}
+            {/* Summary of entered information will go here later */}
             <div className="card" style={{ marginTop: "20px", padding: "20px" }}>
               <h4>Borrower Information</h4>
-              <p>John Smith</p>
-              <p>john.smith@example.com</p>
-              <p>+1 (555) 123-4567</p>
+              <p>John Mokoena</p>
+              <p>john.Mokoena@gmail.com</p>
+              <p>+266 5874 3782</p>
 
               <h4 style={{ marginTop: "20px" }}>Loan Details</h4>
-              <p>Amount: $5,000</p>
+              <p>Amount: M5,000</p>
               <p>Term: 12 months</p>
               <p>Interest Rate: 12%</p>
               <p>Purpose: Personal</p>

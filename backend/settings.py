@@ -100,6 +100,14 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
+SIMPLE_JWT = {
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'TOKEN_OBTAIN_SERIALIZER': 'users.serializers.CustomTokenObtainPairSerializer',
+}
+
+
 AUTH_USER_MODEL = 'users.User'
 
 LANGUAGE_CODE = 'en-us'
@@ -118,6 +126,11 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 

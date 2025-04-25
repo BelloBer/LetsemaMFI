@@ -1,67 +1,129 @@
+
 "use client"
 
 // src/context/AuthContext.js
-import { createContext, useState, useEffect, useContext } from "react"
+import { createContext, useContext, useState, useEffect, useRef } from "react"
+import { loginBorrower, loginStaff, refreshToken, getUserProfile, createAuthenticatedApi } from "../services/auth"
 
-// Create the context
 const AuthContext = createContext()
 
-// Custom hook to use the auth context
 export const useAuth = () => {
   return useContext(AuthContext)
 }
 
-// Provider component
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null)
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const refreshIntervalRef = useRef(null)
 
-  // Mock login function - replace with actual API call in production
-  const login = async (email, password) => {
-    // This is a placeholder for actual authentication
-    // In a real app, you would call your API here
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (email === "admin@example.com" && password === "password") {
-          const user = {
-            id: "1",
-            name: "John Doe",
-            email: "admin@example.com",
-            role: "Administrator",
-          }
-          setCurrentUser(user)
-          localStorage.setItem("user", JSON.stringify(user))
-          resolve(user)
-        } else {
-          reject(new Error("Invalid credentials"))
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"))
+    if (storedUser) {
+      setUser(storedUser)
+      setupTokenRefresh(storedUser.refresh)
+    }
+    setLoading(false)
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current)
+      }
+    }
+  }, [])
+
+  const setupTokenRefresh = (refreshTokenValue) => {
+    // Clear any existing interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current)
+    }
+
+    // Set up a new interval
+    refreshIntervalRef.current = setInterval(
+      async () => {
+        try {
+          const tokens = await refreshToken(refreshTokenValue)
+
+          // Update user with new tokens
+          setUser((prevUser) => {
+            const updatedUser = {
+              ...prevUser,
+              access: tokens.access,
+              refresh: tokens.refresh,
+            }
+            localStorage.setItem("user", JSON.stringify(updatedUser))
+            return updatedUser
+          })
+        } catch (err) {
+          console.error("Token refresh failed:", err)
+          logout()
         }
-      }, 1000)
-    })
+      },
+      4 * 60 * 1000,
+    ) // Refresh every 4 minutes
+  }
+
+  const login = async (username, password, isStaff = false) => {
+    setError(null)
+    try {
+      const loginFunction = isStaff ? loginStaff : loginBorrower
+      const userData = await loginFunction(username, password)
+
+      const user = {
+        ...userData,
+        isStaff,
+        username,
+      }
+
+      localStorage.setItem("user", JSON.stringify(user))
+      setUser(user)
+      setupTokenRefresh(userData.refresh)
+      return user
+    } catch (err) {
+      setError(err.message || "Login failed")
+      throw err
+    }
   }
 
   const logout = () => {
-    setCurrentUser(null)
     localStorage.removeItem("user")
+    setUser(null)
+
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current)
+      refreshIntervalRef.current = null
+    }
   }
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser))
-    }
-    setLoading(false)
-  }, [])
+  // Create an API instance with the current access token
+  const api = user ? createAuthenticatedApi(user.access) : null
 
   const value = {
-    currentUser,
+    user,
+    isAuthenticated: !!user,
+    isStaff: user?.isStaff || false,
+    role: user?.role || null,
     login,
     logout,
+    error,
     loading,
+    api,
+    refetchUser: async () => {
+      if (user?.access) {
+        try {
+          const profile = await getUserProfile(user.access)
+          setUser((prev) => ({ ...prev, ...profile }))
+          return profile
+        } catch (err) {
+          console.error("Failed to fetch user profile:", err)
+          if (err.message.includes("401")) {
+            logout()
+          }
+          throw err
+        }
+      }
+    },
   }
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>
 }
-
-export default AuthProvider
-

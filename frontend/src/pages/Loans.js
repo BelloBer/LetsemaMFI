@@ -1,6 +1,5 @@
 "use client"
 
-// src/pages/Loans.js
 import { useState } from "react"
 import styled from "styled-components"
 import { FaSearch, FaPlus, FaFilter, FaEllipsisV, FaFileAlt, FaCheck, FaTimes, FaClock } from "react-icons/fa"
@@ -37,7 +36,7 @@ const Button = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     opacity: 0.9;
   }
@@ -53,7 +52,7 @@ const SecondaryButton = styled(Button)`
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
-  
+
   &:hover {
     background: var(--background);
   }
@@ -63,7 +62,7 @@ const SearchFilterContainer = styled.div`
   display: flex;
   justify-content: space-between;
   margin-bottom: 20px;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 10px;
@@ -73,7 +72,7 @@ const SearchFilterContainer = styled.div`
 const SearchContainer = styled.div`
   position: relative;
   width: 300px;
-  
+
   @media (max-width: 768px) {
     width: 100%;
   }
@@ -87,7 +86,7 @@ const SearchInput = styled.input`
   background: var(--background);
   color: var(--text);
   font-size: 14px;
-  
+
   &:focus {
     outline: none;
     border-color: var(--primary-light);
@@ -122,7 +121,7 @@ const FilterTab = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: ${(props) => (props.active ? "var(--primary)" : "var(--background)")};
   }
@@ -148,11 +147,11 @@ const TableHeader = styled.th`
   font-weight: 600;
   font-size: 14px;
   border-bottom: 1px solid var(--border);
-  
+
   &:first-child {
     padding-left: 20px;
   }
-  
+
   &:last-child {
     padding-right: 20px;
     text-align: right;
@@ -163,7 +162,7 @@ const TableRow = styled.tr`
   &:hover {
     background: var(--background);
   }
-  
+
   &:not(:last-child) {
     border-bottom: 1px solid var(--border);
   }
@@ -172,11 +171,11 @@ const TableRow = styled.tr`
 const TableCell = styled.td`
   padding: 16px;
   font-size: 14px;
-  
+
   &:first-child {
     padding-left: 20px;
   }
-  
+
   &:last-child {
     padding-right: 20px;
     text-align: right;
@@ -245,7 +244,7 @@ const ActionButton = styled.button`
   color: var(--text-light);
   cursor: pointer;
   font-size: 16px;
-  
+
   &:hover {
     color: var(--primary);
   }
@@ -281,11 +280,11 @@ const PageButton = styled.button`
   color: ${(props) => (props.active ? "white" : "var(--text)")};
   font-size: 14px;
   cursor: pointer;
-  
+
   &:hover {
     background: ${(props) => (props.active ? "var(--primary)" : "var(--background)")};
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -295,12 +294,12 @@ const PageButton = styled.button`
 const Loans = () => {
   const [activeTab, setActiveTab] = useState("all")
 
-  // Sample loans data
+  // Sample loans data with Sesotho names and Maloti currency
   const loans = [
     {
       id: "L-2023-001",
-      borrower: "John Smith",
-      amount: "$5,000",
+      borrower: "Thabo Mokoena",
+      amount: "M5,000",
       interest: "12%",
       term: "12 months",
       date: "2023-05-15",
@@ -308,8 +307,8 @@ const Loans = () => {
     },
     {
       id: "L-2023-002",
-      borrower: "Sarah Johnson",
-      amount: "$8,500",
+      borrower: "Lineo Mphutlane",
+      amount: "M8,500",
       interest: "10%",
       term: "24 months",
       date: "2023-05-14",
@@ -317,8 +316,8 @@ const Loans = () => {
     },
     {
       id: "L-2023-003",
-      borrower: "Michael Brown",
-      amount: "$3,200",
+      borrower: "Teboho Letsie",
+      amount: "M3,200",
       interest: "15%",
       term: "6 months",
       date: "2023-05-12",
@@ -326,8 +325,8 @@ const Loans = () => {
     },
     {
       id: "L-2023-004",
-      borrower: "Emily Davis",
-      amount: "$10,000",
+      borrower: "Palesa Mokete",
+      amount: "M10,000",
       interest: "8%",
       term: "36 months",
       date: "2023-05-10",
@@ -335,8 +334,8 @@ const Loans = () => {
     },
     {
       id: "L-2023-005",
-      borrower: "Robert Wilson",
-      amount: "$7,500",
+      borrower: "Tumelo Ramokoatsi",
+      amount: "M7,500",
       interest: "11%",
       term: "18 months",
       date: "2023-05-08",
@@ -344,8 +343,8 @@ const Loans = () => {
     },
     {
       id: "L-2023-006",
-      borrower: "Lisa Thompson",
-      amount: "$6,200",
+      borrower: "Nthabiseng Motaung",
+      amount: "M6,200",
       interest: "13%",
       term: "12 months",
       date: "2023-05-05",
@@ -353,8 +352,8 @@ const Loans = () => {
     },
     {
       id: "L-2023-007",
-      borrower: "David Martinez",
-      amount: "$4,800",
+      borrower: "Lehlohonolo Mahao",
+      amount: "M4,800",
       interest: "14%",
       term: "9 months",
       date: "2023-05-03",

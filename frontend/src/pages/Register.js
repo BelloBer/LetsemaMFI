@@ -1,121 +1,163 @@
 "use client"
 
 // src/pages/Register.js
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "../context/AuthContext"
+import { registerStaff } from "../services/auth"
 import { useNavigate, Link } from "react-router-dom"
 import styled from "styled-components"
-import { FaUser, FaLock, FaEnvelope, FaUserPlus } from "react-icons/fa"
+import { FaUser, FaEnvelope, FaLock, FaUserTag, FaBuilding, FaUserPlus } from "react-icons/fa"
 
-const RegisterContainer = styled.div`
+const RegisterWrapper = styled.div`
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-height: 100vh;
-  background: var(--background);
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  padding: 20px;
 `
 
-const RegisterCard = styled.div`
-  background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+const RegisterContainer = styled.div`
+  max-width: 550px;
   width: 100%;
-  max-width: 400px;
-  padding: 40px;
+  padding: 2.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-in-out;
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 `
 
 const Logo = styled.div`
   font-size: 28px;
   font-weight: 700;
+  color: var(--primary);
   text-align: center;
-  margin-bottom: 30px;
-  color: var(--text);
-
+  margin-bottom: 10px;
+  
   span {
-    color: var(--primary);
+    color: var(--text);
   }
 `
 
-const FormTitle = styled.h2`
-  font-size: 24px;
-  text-align: center;
-  margin-bottom: 30px;
+const Title = styled.h2`
   color: var(--text);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+`
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 `
 
 const FormGroup = styled.div`
-  margin-bottom: 20px;
-`
-
-const InputGroup = styled.div`
   position: relative;
 `
 
 const Input = styled.input`
   width: 100%;
-  padding: 12px 15px 12px 45px;
-  border-radius: 8px;
+  padding: 1rem 1rem 1rem 3rem;
   border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
-  font-size: 14px;
-
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  
   &:focus {
     outline: none;
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+  }
+`
+
+const Select = styled.select`
+  width: 100%;
+  padding: 1rem 1rem 1rem 3rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background-color: white;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
   }
 `
 
 const InputIcon = styled.div`
   position: absolute;
-  left: 15px;
+  left: 1rem;
   top: 50%;
   transform: translateY(-50%);
   color: var(--text-light);
-  font-size: 16px;
+  font-size: 1.2rem;
 `
 
-const RegisterButton = styled.button`
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: white;
-  font-size: 16px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
+const Button = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: all 0.2s ease;
-
+  padding: 1rem;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 0.5rem;
+  
   &:hover {
-    background: var(--primary-dark);
+    background-color: var(--primary-dark);
   }
-
+  
   &:disabled {
-    opacity: 0.7;
+    background-color: var(--text-light);
     cursor: not-allowed;
   }
 `
 
-const ErrorMessage = styled.div`
-  color: var(--danger);
-  font-size: 14px;
-  margin-top: 5px;
+const Message = styled.div`
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
   text-align: center;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const ErrorMessage = styled(Message)`
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+`
+
+const SuccessMessage = styled(Message)`
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--success);
 `
 
 const LoginLink = styled.div`
   text-align: center;
-  margin-top: 20px;
-  font-size: 14px;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-light);
   
   a {
     color: var(--primary);
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
     
     &:hover {
@@ -124,138 +166,151 @@ const LoginLink = styled.div`
   }
 `
 
-const Register = ({ onLogin }) => {
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-
+const Register = () => {
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    role: "LOAN_OFFICER",
+    mfi: "",
+  })
+  const [mfis, setMfis] = useState([])
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { user, api } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    // Only system admins or MFI admins can register staff
+    if (!user || (user.role !== "SYSTEM_ADMIN" && user.role !== "MFI_ADMIN")) {
+      navigate("/dashboard")
+      return
+    }
+
+    // Fetch MFIs
+    if (api) {
+      api
+        .get(`${process.env.REACT_APP_API_URL || "http://localhost:8000"}/api/mfis/`)
+        .then((data) => setMfis(data))
+        .catch((err) => console.error("Failed to fetch MFIs:", err))
+    }
+  }, [user, api, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
-    if (!name || !email || !password || !confirmPassword) {
-      setError("Please fill in all fields")
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
+    setIsSubmitting(true)
+    setError(null)
+    setSuccess(null)
 
     try {
-      setError("")
-      setLoading(true)
+      await registerStaff(formData)
+      setSuccess("Staff registered successfully!")
 
-      // For demo purposes, just store the user in localStorage
-      // In a real app, you would register with your backend
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: "1",
-          name: name,
-          email: email,
-          role: "User",
-        }),
-      )
-
-      // Call the onLogin callback
-      onLogin()
-
-      // Navigate to dashboard
-      navigate("/dashboard")
-    } catch (error) {
-      setError("Registration failed. Please try again.")
+      setTimeout(() => {
+        navigate("/dashboard/users")
+      }, 2000)
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.")
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <RegisterContainer>
-      <RegisterCard>
+    <RegisterWrapper>
+      <RegisterContainer>
         <Logo>
           Letsema<span>.</span>
         </Logo>
-        <FormTitle>Create an account</FormTitle>
+        <Title>Register Staff Member</Title>
 
-        <form onSubmit={handleSubmit}>
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {success && <SuccessMessage>{success}</SuccessMessage>}
+
+        <Form onSubmit={handleSubmit}>
           <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaUser />
-              </InputIcon>
-              <Input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
-            </InputGroup>
+            <InputIcon>
+              <FaUser />
+            </InputIcon>
+            <Input
+              type="text"
+              placeholder="Username"
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              required
+            />
           </FormGroup>
 
           <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaEnvelope />
-              </InputIcon>
-              <Input
-                type="email"
-                placeholder="Email Address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </InputGroup>
+            <InputIcon>
+              <FaEnvelope />
+            </InputIcon>
+            <Input
+              type="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+            />
           </FormGroup>
 
           <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaLock />
-              </InputIcon>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </InputGroup>
+            <InputIcon>
+              <FaLock />
+            </InputIcon>
+            <Input
+              type="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+              minLength="8"
+            />
           </FormGroup>
 
           <FormGroup>
-            <InputGroup>
-              <InputIcon>
-                <FaLock />
-              </InputIcon>
-              <Input
-                type="password"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </InputGroup>
+            <InputIcon>
+              <FaUserTag />
+            </InputIcon>
+            <Select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })}>
+              <option value="LOAN_OFFICER">Loan Officer</option>
+              {user?.role === "SYSTEM_ADMIN" && (
+                <>
+                  <option value="MFI_ADMIN">MFI Admin</option>
+                  <option value="CREDIT_ANALYST">Credit Analyst</option>
+                  <option value="SYSTEM_ADMIN">System Admin</option>
+                </>
+              )}
+            </Select>
           </FormGroup>
 
-          {error && <ErrorMessage>{error}</ErrorMessage>}
+          <FormGroup>
+            <InputIcon>
+              <FaBuilding />
+            </InputIcon>
+            <Select value={formData.mfi} onChange={(e) => setFormData({ ...formData, mfi: e.target.value })} required>
+              <option value="">Select MFI</option>
+              {mfis.map((mfi) => (
+                <option key={mfi.mfi_id} value={mfi.mfi_id}>
+                  {mfi.name}
+                </option>
+              ))}
+            </Select>
+          </FormGroup>
 
-          <RegisterButton type="submit" disabled={loading}>
-            {loading ? (
-              "Registering..."
-            ) : (
-              <>
-                <FaUserPlus />
-                Register
-              </>
-            )}
-          </RegisterButton>
-        </form>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Registering..." : "Register Staff Member"}
+            {!isSubmitting && <FaUserPlus />}
+          </Button>
+        </Form>
 
         <LoginLink>
-          Already have an account? <Link to="/login">Login</Link>
+          <Link to="/dashboard">Back to Dashboard</Link>
         </LoginLink>
-      </RegisterCard>
-    </RegisterContainer>
+      </RegisterContainer>
+    </RegisterWrapper>
   )
 }
 
 export default Register
-

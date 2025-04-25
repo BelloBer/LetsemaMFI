@@ -1,41 +1,96 @@
-# users/views.py
-from rest_framework import generics
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework import status
-from .serializers import UserSerializer
-from users.models import User
-from .permissions import IsAdminUser, IsManagerOrAdmin
 
-# Public view: Only admins can register users
-class RegisterUserView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    #permission_classes = [IsAuthenticated, IsAdminUser]  # Only admins can create users
-    permission_classes = [AllowAny]  # Allow anyone to create users 
-    serializer_class = UserSerializer
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from .models import User, Borrower
+from .models import MFI
+# from .serializers import MFISerializer 
+from .serializers import (
+    StaffRegistrationSerializer,
+    BorrowerRegistrationSerializer,
+    UserProfileSerializer,
+    BorrowerLoginSerializer
+)
+from .permissions import AllowAny, BasicAuthPermission
+
+class RegisterStaffView(generics.CreateAPIView):
+    serializer_class = StaffRegistrationSerializer
+    permission_classes = [AllowAny]
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "user": serializer.data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
+
+class RegisterBorrowerView(generics.CreateAPIView):
+    serializer_class = BorrowerRegistrationSerializer
+    permission_classes = [AllowAny]
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        borrower = serializer.save()
+
+        refresh = RefreshToken.for_user(borrower.user)
+        return Response({
+            "message": "Borrower registered successfully",
+            "borrower_id": str(borrower.borrower_id),
+            "user_id": borrower.user.id,
+            "username": borrower.user.username,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        }, status=status.HTTP_201_CREATED)
+
+class BorrowerLoginView(generics.GenericAPIView):
+    serializer_class = BorrowerLoginSerializer
+    permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
-# Protected: Only logged-in users can access their profile
 class UserProfileView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+    serializer_class = UserProfileSerializer
+    permission_classes = [BasicAuthPermission]
 
-    def get(self, request, *args, **kwargs):
-        serializer = self.serializer_class(request.user)
-        return Response(serializer.data)
+    def get_object(self):
+        return self.request.user
+    
 
-# Protected: Only managers & admins can access this view
-class ManagerOnlyView(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
 
-    def get_queryset(self):
-        return User.objects.all()
+# class MFIListView(generics.ListAPIView):
+#     """
+#     API endpoint that lists all MFIs
+#     """
+#     queryset = MFI.objects.all()
+#     serializer_class = MFISerializer
+#     permission_classes = [AllowAny]  # Or your preferred permission
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -33,7 +33,7 @@ const Button = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     opacity: 0.9;
   }
@@ -49,7 +49,7 @@ const SecondaryButton = styled(Button)`
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
-  
+
   &:hover {
     background: var(--background);
   }
@@ -59,7 +59,7 @@ const SearchFilterContainer = styled.div`
   display: flex;
   justify-content: space-between;
   margin-bottom: 20px;
-  
+
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 10px;
@@ -69,7 +69,7 @@ const SearchFilterContainer = styled.div`
 const SearchContainer = styled.div`
   position: relative;
   width: 300px;
-  
+
   @media (max-width: 768px) {
     width: 100%;
   }
@@ -83,7 +83,7 @@ const SearchInput = styled.input`
   background: var(--background);
   color: var(--text);
   font-size: 14px;
-  
+
   &:focus {
     outline: none;
     border-color: var(--primary-light);
@@ -112,7 +112,7 @@ const BorrowerCard = styled.div`
   padding: 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  
+
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
@@ -163,7 +163,7 @@ const BorrowerActions = styled.button`
   border: none;
   color: var(--text-light);
   cursor: pointer;
-  
+
   &:hover {
     color: var(--primary);
   }
@@ -216,67 +216,67 @@ const ViewProfileButton = styled.button`
   background: transparent;
   border: none;
   cursor: pointer;
-  
+
   &:hover {
     text-decoration: underline;
   }
 `
 
 const Borrowers = () => {
-  // Sample borrowers data
+  // Sample borrowers data with Sesotho names and Lesotho contact information
   const borrowers = [
     {
       id: "B-2023-001",
-      name: "John Smith",
-      email: "john.smith@example.com",
-      phone: "+1 (555) 123-4567",
+      name: "Thabo Mokoena",
+      email: "thabo.mokoena@gmail.com",
+      phone: "+266 5885 1234",
       activeLoans: 2,
-      totalBorrowed: "$12,500",
+      totalBorrowed: "M12,500",
       status: "active",
     },
     {
       id: "B-2023-002",
-      name: "Sarah Johnson",
-      email: "sarah.j@example.com",
-      phone: "+1 (555) 987-6543",
+      name: "Lineo Mphutlane",
+      email: "lineo.m@gmail.com",
+      phone: "+266 5987 6543",
       activeLoans: 1,
-      totalBorrowed: "$8,500",
+      totalBorrowed: "M8,500",
       status: "active",
     },
     {
       id: "B-2023-003",
-      name: "Michael Brown",
-      email: "michael.b@example.com",
-      phone: "+1 (555) 456-7890",
+      name: "Teboho Letsie",
+      email: "teboho.l@gmail.com",
+      phone: "+266 5456 7890",
       activeLoans: 3,
-      totalBorrowed: "$15,700",
+      totalBorrowed: "M15,700",
       status: "active",
     },
     {
       id: "B-2023-004",
-      name: "Emily Davis",
-      email: "emily.d@example.com",
-      phone: "+1 (555) 234-5678",
+      name: "Palesa Mokete",
+      email: "palesa.m@gmail.com",
+      phone: "+266 5234 5678",
       activeLoans: 0,
-      totalBorrowed: "$10,000",
+      totalBorrowed: "M10,000",
       status: "inactive",
     },
     {
       id: "B-2023-005",
-      name: "Robert Wilson",
-      email: "robert.w@example.com",
-      phone: "+1 (555) 876-5432",
+      name: "Tumelo Ramokoatsi",
+      email: "tumelo.r@gmail.com",
+      phone: "+266 5876 5432",
       activeLoans: 1,
-      totalBorrowed: "$7,500",
+      totalBorrowed: "M7,500",
       status: "active",
     },
     {
       id: "B-2023-006",
-      name: "Lisa Thompson",
-      email: "lisa.t@example.com",
-      phone: "+1 (555) 345-6789",
+      name: "Nthabiseng Motaung",
+      email: "nthabiseng.m@gmail.com",
+      phone: "+266 5345 6789",
       activeLoans: 2,
-      totalBorrowed: "$13,200",
+      totalBorrowed: "M13,200",
       status: "active",
     },
   ]
