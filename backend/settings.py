@@ -30,7 +30,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'users.apps.UsersConfig',
     'loans.apps.LoansConfig',
-    
+    'core',
 
 ]
 
