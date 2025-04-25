@@ -1,4 +1,4 @@
-
+# users/serializers.py
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
@@ -160,6 +160,62 @@ class UserProfileSerializer(serializers.ModelSerializer):
     
 
 
+
+
+
+class BorrowerProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = Borrower
+        fields = [
+            'borrower_id',
+            'username',
+            'email',
+            'full_name',
+            'national_id',
+            'date_of_birth',
+            'phone',
+            'address',
+            'created_at',
+            'mfi'
+        ]
+        read_only_fields = [
+            'borrower_id', 
+            'national_id',
+            'date_of_birth',
+            'created_at',
+            'mfi'
+        ]
+
+    def validate_phone(self, value):
+        if not value.startswith('+'):
+            raise serializers.ValidationError("Phone number must start with country code (e.g. +266)")
+        return value
+
+    def validate_address(self, value):
+        required_fields = ['street', 'city', 'district', 'postal_code']
+        if not all(field in value for field in required_fields):
+            raise serializers.ValidationError(
+                f"Address must include all required fields: {', '.join(required_fields)}"
+            )
+        return value
+
+    def update(self, instance, validated_data):
+        # Update only allowed fields
+        instance.full_name = validated_data.get('full_name', instance.full_name)
+        instance.phone = validated_data.get('phone', instance.phone)
+        instance.address = validated_data.get('address', instance.address)
+        instance.save()
+        return instance
+
+
+class MFIListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MFI
+        fields = ['mfi_id', 'name', 'location', 'is_active']
+
 # class MFISerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = MFI
@@ -204,3 +260,4 @@ class UserProfileSerializer(serializers.ModelSerializer):
 #     class Meta:
 #         model = MFI
 #         fields = ['mfi_id', 'name', 'code']
+
