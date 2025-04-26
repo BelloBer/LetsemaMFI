@@ -13,7 +13,8 @@ import {
   FaTimesCircle,
   FaClock,
 } from "react-icons/fa"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
+import SuccessNotification from "../../components/SuccessNotification"
 
 const DashboardContainer = styled.div`
   padding: 90px 30px 30px;
@@ -256,6 +257,21 @@ const BorrowerDashboard = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [borrowerInfo, setBorrowerInfo] = useState(null)
+  const [notification, setNotification] = useState(null)
+  const location = useLocation()
+
+  // Check for success message in location state
+  useEffect(() => {
+    if (location.state?.success) {
+      setNotification({
+        title: "Success!",
+        message: location.state.message || "Operation completed successfully.",
+      })
+
+      // Clear the location state to prevent showing the notification again on refresh
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   // Get status icon based on loan status
   const getStatusIcon = (status) => {
@@ -372,6 +388,13 @@ const BorrowerDashboard = () => {
 
   return (
     <DashboardContainer>
+      {notification && (
+        <SuccessNotification
+          title={notification.title}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
       <WelcomeSection>
         <WelcomeTitle>Welcome, {user?.username || "Borrower"}</WelcomeTitle>
         <WelcomeSubtitle>Here's an overview of your loans and upcoming payments</WelcomeSubtitle>
