@@ -19,7 +19,8 @@ from .views import (
     BorrowerLoginView,
     UserProfileView,
     BorrowerProfileView,
-    ActiveMFIListView
+    ActiveMFIListView,
+    MFIDetailView
 )
 
 urlpatterns = [
@@ -37,6 +38,7 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('profile/borrower/', BorrowerProfileView.as_view(), name='user-profile-borrower'),
     path('mfis/active/', ActiveMFIListView.as_view(), name='mfi-list'),
+    path('mfis/<uuid:mfi_id>/', MFIDetailView.as_view(), name='mfi-detail'),
     # path('api/users/mfis/', MFIListView.as_view(), name='mfi-list'),
 ]
 

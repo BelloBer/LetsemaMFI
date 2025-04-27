@@ -26,6 +26,8 @@ import BorrowerRoutes from "./pages/borrower/BorrowerRoutes"
 import Unauthorized from "./pages/Unauthorized"
 import RegisterLoanOfficer from './pages/loans/RegisterLoanOfficer'
 import LoanDetails from './pages/loans/LoanDetails'
+import Profile from './pages/Profile'
+import StaffProfile from './pages/StaffProfile'
 
 const AppContainer = styled.div`
   display: flex;
@@ -46,27 +48,6 @@ const AuthContainer = styled.div`
   min-height: 100vh;
   background-color: #f5f7fa;
 `
-
-// Component to redirect users based on their role
-const RoleBasedRedirect = () => {
-  const { user, isAuthenticated, loading } = useAuth()
-
-  if (loading) {
-    return <div>Loading...</div>
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/home" replace />
-  }
-
-  // Redirect based on user role
-  if (user.role === "BORROWER") {
-    return <Navigate to="/borrower/dashboard" replace />
-  } else {
-    // For all staff roles
-    return <Navigate to="/dashboard" replace />
-  }
-}
 
 const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -91,7 +72,6 @@ const App = () => {
     <Router>
       <GlobalStyles />
       <AuthProvider>
-      
         <Routes>
           <Route path="/home" element={<Home />} />
           <Route
@@ -106,6 +86,7 @@ const App = () => {
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/borrowers" element={<Borrowers />} />
                       <Route path="/loans" element={<Loans />} />
+                      <Route path="/loans/:loanId" element={<LoanDetails />} />
                       <Route path="/loans/new" element={<LoanApplication />} />
                       <Route path="/credit-history" element={<CreditHistory />} />
                       <Route path="/repayments" element={<RepaymentTracking />} />
@@ -114,21 +95,8 @@ const App = () => {
                       <Route path="/mfis" element={<MFIManagement />} />
                       <Route path="/register-staff" element={<Register />} />
                       <Route path="/register-loan-officer" element={<RegisterLoanOfficer />} />
+                      <Route path="/profile" element={<StaffProfile />} />
                     </Routes>
-                  </PageContainer>
-                </AppContainer>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/loans/:loanId"
-            element={
-              <ProtectedRoute roles={["SYSTEM_ADMIN", "MFI_ADMIN", "LOAN_OFFICER", "CREDIT_ANALYST"]}>
-                <AppContainer>
-                  <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-                  <PageContainer style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}>
-                    <Navbar sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-                    <LoanDetails />
                   </PageContainer>
                 </AppContainer>
               </ProtectedRoute>
@@ -159,8 +127,7 @@ const App = () => {
             }
           />
           <Route path="/unauthorized" element={<Unauthorized />} />
-          {/* Add a role-based redirect for the root path */}
-          <Route path="/" element={<RoleBasedRedirect />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

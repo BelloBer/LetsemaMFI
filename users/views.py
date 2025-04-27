@@ -1,4 +1,3 @@
-
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -120,6 +119,11 @@ class ActiveMFIListView(generics.ListAPIView):
 #     queryset = MFI.objects.all()
 #     serializer_class = MFISerializer
 #     permission_classes = [AllowAny]  # Or your preferred permission
+
+class MFIDetailView(generics.RetrieveAPIView):
+    queryset = MFI.objects.all()
+    serializer_class = MFIListSerializer
+    lookup_field = "mfi_id"
 
 
 

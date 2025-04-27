@@ -11,6 +11,8 @@ import {
   FaCalendarAlt,
   FaUserCog,
   FaBuilding,
+  FaUserPlus,
+  FaUser,
 } from "react-icons/fa"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
@@ -93,6 +95,12 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
               <FaUserCog />
               <MenuText collapsed={collapsed}>User Management</MenuText>
             </MenuItem>
+            {user?.role === "MFI_ADMIN" && (
+              <MenuItem to="/dashboard/register-loan-officer" active={isActive("/register-loan-officer")} collapsed={collapsed}>
+                <FaUserPlus />
+                <MenuText collapsed={collapsed}>Register Loan Officer</MenuText>
+              </MenuItem>
+            )}
             {user?.role === "SYSTEM_ADMIN" && (
               <MenuItem to="/dashboard/mfis" active={isActive("/mfis")} collapsed={collapsed}>
                 <FaBuilding />
@@ -103,6 +111,10 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
         )}
 
         <MenuLabel collapsed={collapsed}>Settings</MenuLabel>
+        <MenuItem to="/dashboard/profile" active={isActive("/profile")} collapsed={collapsed}>
+          <FaUser />
+          <MenuText collapsed={collapsed}>My Profile</MenuText>
+        </MenuItem>
         <MenuItem to="/dashboard/settings" active={isActive("/settings")} collapsed={collapsed}>
           <FaCog />
           <MenuText collapsed={collapsed}>Settings</MenuText>
