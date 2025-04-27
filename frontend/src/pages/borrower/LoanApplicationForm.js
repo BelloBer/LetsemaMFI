@@ -1,10 +1,16 @@
+
+
+
 // "use client"
 
-// import { useState, useCallback } from "react"
+// import { useState, useEffect } from "react"
 // import { useAuth } from "../../context/AuthContext"
-// import { useNavigate } from "react-router-dom"
 // import styled from "styled-components"
-// import { FaArrowLeft, FaCheck, FaMoneyBillWave, FaCalendarAlt, FaInfoCircle, FaCalculator } from "react-icons/fa"
+// import { FaArrowLeft, FaCheck } from "react-icons/fa"
+// import { useNavigate } from "react-router-dom"
+
+
+
 
 // const ApplicationContainer = styled.div`
 //   background: var(--card-bg);
@@ -12,8 +18,9 @@
 //   padding: 30px;
 //   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 //   max-width: 800px;
-//   margin: 90px auto 30px;
+//   margin: 0 auto;
 // `
+
 
 // const ApplicationHeader = styled.div`
 //   display: flex;
@@ -49,7 +56,6 @@
 //   color: var(--text);
 //   display: flex;
 //   align-items: center;
-//   gap: 10px;
   
 //   &::after {
 //     content: '';
@@ -77,9 +83,6 @@
 //   margin-bottom: 8px;
 //   color: var(--text);
 //   font-weight: 500;
-//   display: flex;
-//   align-items: center;
-//   gap: 5px;
 // `
 
 // const Input = styled.input`
@@ -211,94 +214,166 @@
 //   font-weight: ${(props) => (props.active ? "600" : "400")};
 // `
 
-// const ErrorMessage = styled.div`
-//   color: var(--danger);
-//   font-size: 14px;
-//   margin-top: 5px;
-// `
 
-// const CalculationResult = styled.div`
-//   background: var(--background);
-//   border-radius: 8px;
-//   padding: 15px;
-//   margin-top: 20px;
-// `
-
-// const ResultRow = styled.div`
-//   display: flex;
-//   justify-content: space-between;
-//   margin-bottom: 10px;
-//   font-size: 14px;
-  
-//   &:last-child {
-//     margin-bottom: 0;
-//     padding-top: 10px;
-//     border-top: 1px solid var(--border);
-//     font-weight: 600;
-//   }
-// `
-
-// const InfoTooltip = styled.span`
-//   cursor: help;
-//   color: var(--primary);
-// `
 
 // const LoanApplicationForm = () => {
-//   const navigate = useNavigate()
-//   const { api } = useAuth()
+//   const { user, api } = useAuth() // Get authenticated user and API instance
 //   const [currentStep, setCurrentStep] = useState(1)
+//   const [mfis, setMfis] = useState([])
+//   const [loadingMFIs, setLoadingMFIs] = useState(true)
+//   const totalSteps = 2 // Reduced to 2 steps since user info is already available
 //   const [formData, setFormData] = useState({
 //     amount: "",
-//     term: "12",
+//     term: "",
 //     purpose: "",
-//     employment_status: "",
-//     monthly_income: "",
-//     additional_info: "",
+//     additional_notes: "",
+//     mfi_id: ""
 //   })
-//   const [errors, setErrors] = useState({})
 //   const [isSubmitting, setIsSubmitting] = useState(false)
-//   const [calculationVisible, setCalculationVisible] = useState(false)
+//   const [error, setError] = useState(null)
+//   const navigate = useNavigate()
 
-//   const totalSteps = 3
+//   // Add useEffect to fetch MFIs when component mounts
+//   // Fetch MFIs when component mounts
+//   useEffect(() => {
+//     const fetchMFIs = async () => {
+//       setLoadingMFIs(true);
+//       try {
+//         const response = await fetch(`${process.env.REACT_APP_API_URL}/mfis/active/`, {
+//           headers: {
+//             'Authorization': `Bearer ${user.access}`,
+//             'Content-Type': 'application/json',
+//           },
+//         });
 
-//   const validateStep = (step) => {
-//     const stepErrors = {}
-//     let isValid = true
+//         if (!response.ok) {
+//           throw new Error('Failed to fetch MFIs');
+//         }
 
-//     if (step === 1) {
-//       if (!formData.amount || isNaN(formData.amount) || Number.parseFloat(formData.amount) <= 0) {
-//         stepErrors.amount = "Please enter a valid loan amount"
-//         isValid = false
+//         const data = await response.json();
+//         setMfis(data);
+//         setError(null);
+//       } catch (err) {
+//         console.error('Error fetching MFIs:', err);
+//         setError('Failed to load MFIs. Please refresh the page or try again later.');
+//       } finally {
+//         setLoadingMFIs(false);
 //       }
-//       if (!formData.term) {
-//         stepErrors.term = "Please select a loan term"
-//         isValid = false
-//       }
-//       if (!formData.purpose) {
-//         stepErrors.purpose = "Please select a loan purpose"
-//         isValid = false
-//       }
-//     } else if (step === 2) {
-//       if (!formData.employment_status) {
-//         stepErrors.employment_status = "Please select your employment status"
-//         isValid = false
-//       }
-//       if (
-//         !formData.monthly_income ||
-//         isNaN(formData.monthly_income) ||
-//         Number.parseFloat(formData.monthly_income) <= 0
-//       ) {
-//         stepErrors.monthly_income = "Please enter a valid monthly income"
-//         isValid = false
-//       }
-//     }
+//     };
 
-//     setErrors(stepErrors)
-//     return isValid
+//     fetchMFIs();
+//   }, [user.access]);
+
+//   // Render MFI selection with loading state
+//   const renderMFISelection = () => (
+//     <FormGroup>
+//       <Label>Select Microfinance Institution</Label>
+//       {loadingMFIs ? (
+//         <div>Loading MFIs...</div>
+//       ) : (
+//         <Select
+//           name="mfi_id"
+//           value={formData.mfi_id}
+//           onChange={handleInputChange}
+//           required
+//           disabled={loadingMFIs}
+//         >
+//           <option value="">Select an MFI</option>
+//           {mfis.map(mfi => (
+//             <option key={mfi.mfi_id} value={mfi.mfi_id}>
+//               {mfi.name} - {mfi.location}
+//             </option>
+//           ))}
+//         </Select>
+//       )}
+//     </FormGroup>
+//   );
+
+//     // Display any errors at the top of the form
+//   const renderError = () => error && (
+//     <div style={{
+//       color: 'red',
+//       backgroundColor: 'rgba(255, 0, 0, 0.1)',
+//       padding: '10px',
+//       borderRadius: '4px',
+//       marginBottom: '20px'
+//     }}>
+//       {error}
+//     </div>
+//   );
+
+
+//   const handleInputChange = (e) => {
+//     const { name, value } = e.target
+//     setFormData(prev => ({
+//       ...prev,
+//       [name]: value
+//     }))
 //   }
 
+//   const handleSubmit = async () => {
+//     setIsSubmitting(true);
+//     setError(null);
+
+//     // Validate form data
+//     if (!formData.amount || !formData.term || !formData.purpose || !formData.mfi_id) {
+//       setError('Please fill in all required fields');
+//       setIsSubmitting(false);
+//       return;
+//     }
+
+//     try {
+//       const response = await api.post('/api/loans/apply/', {
+//         amount: parseFloat(formData.amount),
+//         term: parseInt(formData.term),
+//         purpose: formData.purpose.toUpperCase(),
+//         additional_notes: formData.additional_notes || '',
+//         mfi_id: formData.mfi_id
+//       });
+
+//       if (response.data) {
+//         alert('Loan application submitted successfully!');
+//         navigate('/borrower/dashboard', {
+//           state: { 
+//             success: true, 
+//             message: 'Loan application submitted successfully!',
+//             loanId: response.data.loan_id 
+//           }
+//         });
+//       }
+//     } catch (err) {
+//       console.error('Error submitting loan application:', err);
+//       setError(err.response?.data?.detail || 'Failed to submit loan application');
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+
+//   // const handleSubmit = async () => {
+//   //   setIsSubmitting(true)
+//   //   setError(null)
+
+//   //   try {
+//   //     const response = await api.post('/api/loans/apply/', {
+//   //       amount: parseFloat(formData.amount),
+//   //       term: parseInt(formData.term),
+//   //       purpose: formData.purpose,
+//   //       additional_notes: formData.additional_notes
+//   //     })
+
+//   //     // Handle successful submission
+//   //     alert('Loan application submitted successfully!')
+//   //     // You might want to redirect to a confirmation page or loans list
+//   //   } catch (err) {
+//   //     setError(err.response?.data?.detail || 'Failed to submit loan application')
+//   //   } finally {
+//   //     setIsSubmitting(false)
+//   //   }
+//   // }
+
 //   const nextStep = () => {
-//     if (validateStep(currentStep) && currentStep < totalSteps) {
+//     if (currentStep < totalSteps) {
 //       setCurrentStep(currentStep + 1)
 //     }
 //   }
@@ -309,85 +384,16 @@
 //     }
 //   }
 
-//   const handleChange = (e) => {
-//     const { name, value } = e.target
-//     setFormData({
-//       ...formData,
-//       [name]: value,
-//     })
-
-//     // Clear error when field is edited
-//     if (errors[name]) {
-//       setErrors({
-//         ...errors,
-//         [name]: null,
-//       })
-//     }
-//   }
-
-//   const handleSubmit = async () => {
-//     if (!validateStep(currentStep)) return
-
-//     setIsSubmitting(true)
-//     try {
-//       // Submit loan application to API
-//       await api.post(`${process.env.REACT_APP_API_URL}/api/loans/apply/`, formData)
-
-//       // Navigate to success page or dashboard
-//       navigate("/borrower/dashboard", {
-//         state: {
-//           success: true,
-//           message: "Your loan application has been submitted successfully!",
-//         },
-//       })
-//     } catch (error) {
-//       console.error("Error submitting loan application:", error)
-//       setErrors({
-//         submit: "Failed to submit loan application. Please try again later.",
-//       })
-//     } finally {
-//       setIsSubmitting(false)
-//     }
-//   }
-
-//   // Use useCallback to memoize the calculation function
-//   const calculateLoan = useCallback(() => {
-//     const amount = Number.parseFloat(formData.amount)
-//     const term = Number.parseInt(formData.term)
-//     const interestRate = 0.12 // 12% annual interest rate
-
-//     if (isNaN(amount) || amount <= 0 || isNaN(term) || term <= 0) {
-//       return null
-//     }
-
-//     // Simple interest calculation
-//     const totalInterest = amount * interestRate * (term / 12)
-//     const totalAmount = amount + totalInterest
-//     const monthlyPayment = totalAmount / term
-
-//     return {
-//       principal: amount.toFixed(2),
-//       interestRate: (interestRate * 100).toFixed(1),
-//       totalInterest: totalInterest.toFixed(2),
-//       totalAmount: totalAmount.toFixed(2),
-//       monthlyPayment: monthlyPayment.toFixed(2),
-//     }
-//   }, [formData.amount, formData.term])
-
-//   const toggleCalculation = () => {
-//     setCalculationVisible(!calculationVisible)
-//   }
-
-//   const loanCalculation = calculateLoan()
-
 //   return (
 //     <ApplicationContainer>
 //       <ApplicationHeader>
-//         <BackButton onClick={() => navigate("/borrower/dashboard")}>
+//         <BackButton onClick={() => navigate('/borrower/dashboard')}>
 //           <FaArrowLeft />
 //         </BackButton>
 //         <ApplicationTitle>New Loan Application</ApplicationTitle>
 //       </ApplicationHeader>
+
+      
 
 //       <StepIndicator>
 //         <Step active={currentStep === 1} completed={currentStep > 1}>
@@ -396,58 +402,62 @@
 //           </StepCircle>
 //           <StepLabel active={currentStep === 1}>Loan Details</StepLabel>
 //         </Step>
-//         <Step active={currentStep === 2} completed={currentStep > 2}>
-//           <StepCircle active={currentStep === 2} completed={currentStep > 2}>
-//             {currentStep > 2 ? <FaCheck /> : 2}
-//           </StepCircle>
-//           <StepLabel active={currentStep === 2}>Financial Info</StepLabel>
-//         </Step>
-//         <Step active={currentStep === 3}>
-//           <StepCircle active={currentStep === 3}>3</StepCircle>
-//           <StepLabel active={currentStep === 3}>Review & Submit</StepLabel>
+//         <Step active={currentStep === 2}>
+//           <StepCircle active={currentStep === 2}>2</StepCircle>
+//           <StepLabel active={currentStep === 2}>Review & Submit</StepLabel>
 //         </Step>
 //       </StepIndicator>
 
+//       {error && (
+//         <div style={{ color: 'red', marginBottom: '20px', textAlign: 'center' }}>
+//           {error}
+//         </div>
+//       )}
+
 //       {currentStep === 1 && (
 //         <FormSection>
-//           <SectionTitle>
-//             <FaMoneyBillWave /> Loan Details
-//           </SectionTitle>
+//           <SectionTitle>Loan Details</SectionTitle>
+//           {renderMFISelection()}
 //           <FormRow>
 //             <FormGroup>
-//               <Label>
-//                 <FaMoneyBillWave /> Loan Amount (M)
-//               </Label>
+//               <Label>Loan Amount (M)</Label>
 //               <Input
 //                 type="number"
 //                 name="amount"
-//                 placeholder="Enter amount"
 //                 value={formData.amount}
-//                 onChange={handleChange}
+//                 onChange={handleInputChange}
+//                 placeholder="Enter amount"
+//                 required
 //               />
-//               {errors.amount && <ErrorMessage>{errors.amount}</ErrorMessage>}
 //             </FormGroup>
 //             <FormGroup>
-//               <Label>
-//                 <FaCalendarAlt /> Loan Term
-//               </Label>
-//               <Select name="term" value={formData.term} onChange={handleChange}>
+//               <Label>Loan Term (Months)</Label>
+//               <Select
+//                 name="term"
+//                 value={formData.term}
+//                 onChange={handleInputChange}
+//                 required
+//               >
 //                 <option value="">Select loan term</option>
 //                 <option value="3">3 months</option>
 //                 <option value="6">6 months</option>
 //                 <option value="12">12 months</option>
 //                 <option value="24">24 months</option>
 //                 <option value="36">36 months</option>
+//                 <option value="48">48 months</option>
+//                 <option value="60">60 months</option>
 //               </Select>
-//               {errors.term && <ErrorMessage>{errors.term}</ErrorMessage>}
 //             </FormGroup>
 //           </FormRow>
 //           <FormRow>
 //             <FormGroup>
-//               <Label>
-//                 <FaInfoCircle /> Purpose of Loan
-//               </Label>
-//               <Select name="purpose" value={formData.purpose} onChange={handleChange}>
+//               <Label>Purpose of Loan</Label>
+//               <Select
+//                 name="purpose"
+//                 value={formData.purpose}
+//                 onChange={handleInputChange}
+//                 required
+//               >
 //                 <option value="">Select purpose</option>
 //                 <option value="personal">Personal</option>
 //                 <option value="business">Business</option>
@@ -455,135 +465,44 @@
 //                 <option value="medical">Medical</option>
 //                 <option value="other">Other</option>
 //               </Select>
-//               {errors.purpose && <ErrorMessage>{errors.purpose}</ErrorMessage>}
 //             </FormGroup>
 //           </FormRow>
-
-//           <Button
-//             type="button"
-//             onClick={toggleCalculation}
-//             style={{
-//               display: "flex",
-//               alignItems: "center",
-//               gap: "5px",
-//               background: "transparent",
-//               border: "none",
-//               color: "var(--primary)",
-//               padding: "10px 0",
-//               cursor: "pointer",
-//             }}
-//           >
-//             <FaCalculator /> {calculationVisible ? "Hide" : "Show"} Loan Calculation
-//           </Button>
-
-//           {calculationVisible && loanCalculation && (
-//             <CalculationResult>
-//               <ResultRow>
-//                 <span>Principal Amount:</span>
-//                 <span>M{loanCalculation.principal}</span>
-//               </ResultRow>
-//               <ResultRow>
-//                 <span>Interest Rate:</span>
-//                 <span>{loanCalculation.interestRate}%</span>
-//               </ResultRow>
-//               <ResultRow>
-//                 <span>Total Interest:</span>
-//                 <span>M{loanCalculation.totalInterest}</span>
-//               </ResultRow>
-//               <ResultRow>
-//                 <span>Monthly Payment:</span>
-//                 <span>M{loanCalculation.monthlyPayment}</span>
-//               </ResultRow>
-//               <ResultRow>
-//                 <span>Total Amount to Repay:</span>
-//                 <span>M{loanCalculation.totalAmount}</span>
-//               </ResultRow>
-//             </CalculationResult>
-//           )}
-//           {errors.calculation && <ErrorMessage>{errors.calculation}</ErrorMessage>}
+//           <FormRow>
+//             <FormGroup>
+//               <Label>Additional Notes</Label>
+//               <Textarea
+//                 name="additional_notes"
+//                 value={formData.additional_notes}
+//                 onChange={handleInputChange}
+//                 placeholder="Enter any additional information"
+//               />
+//             </FormGroup>
+//           </FormRow>
 //         </FormSection>
 //       )}
 
 //       {currentStep === 2 && (
 //         <FormSection>
-//           <SectionTitle>
-//             <FaMoneyBillWave /> Financial Information
-//           </SectionTitle>
-//           <FormRow>
-//             <FormGroup>
-//               <Label>Employment Status</Label>
-//               <Select name="employment_status" value={formData.employment_status} onChange={handleChange}>
-//                 <option value="">Select status</option>
-//                 <option value="employed">Employed</option>
-//                 <option value="self_employed">Self-Employed</option>
-//                 <option value="business_owner">Business Owner</option>
-//                 <option value="unemployed">Unemployed</option>
-//                 <option value="retired">Retired</option>
-//               </Select>
-//               {errors.employment_status && <ErrorMessage>{errors.employment_status}</ErrorMessage>}
-//             </FormGroup>
-//             <FormGroup>
-//               <Label>
-//                 <FaMoneyBillWave /> Monthly Income (M)
-//               </Label>
-//               <Input
-//                 type="number"
-//                 name="monthly_income"
-//                 placeholder="Enter monthly income"
-//                 value={formData.monthly_income}
-//                 onChange={handleChange}
-//               />
-//               {errors.monthly_income && <ErrorMessage>{errors.monthly_income}</ErrorMessage>}
-//             </FormGroup>
-//           </FormRow>
-//           <FormRow>
-//             <FormGroup>
-//               <Label>Additional Information (Optional)</Label>
-//               <Textarea
-//                 name="additional_info"
-//                 placeholder="Enter any additional information that might support your application"
-//                 value={formData.additional_info}
-//                 onChange={handleChange}
-//               />
-//             </FormGroup>
-//           </FormRow>
-//         </FormSection>
-//       )}
-
-//       {currentStep === 3 && (
-//         <FormSection>
 //           <SectionTitle>Review & Submit</SectionTitle>
 //           <div className="review-summary">
 //             <p>Please review all information before submitting the loan application.</p>
-//             <div
-//               className="card"
-//               style={{ marginTop: "20px", padding: "20px", background: "var(--background)", borderRadius: "8px" }}
-//             >
-//               <h4>Loan Details</h4>
+//             <div className="card" style={{ marginTop: "20px", padding: "20px" }}>
+//               <h4>Borrower Information</h4>
+//               <p>{user.full_name}</p>
+//               <p>{user.email}</p>
+//               <p>{user.phone}</p>
+
+//               <h4 style={{ marginTop: "20px" }}>Loan Details</h4>
 //               <p>Amount: M{formData.amount}</p>
 //               <p>Term: {formData.term} months</p>
 //               <p>Purpose: {formData.purpose}</p>
-
-//               <h4 style={{ marginTop: "20px" }}>Financial Information</h4>
-//               <p>Employment Status: {formData.employment_status}</p>
-//               <p>Monthly Income: M{formData.monthly_income}</p>
-//               {formData.additional_info && (
+//               {formData.additional_notes && (
 //                 <>
-//                   <h4 style={{ marginTop: "20px" }}>Additional Information</h4>
-//                   <p>{formData.additional_info}</p>
-//                 </>
-//               )}
-
-//               {loanCalculation && (
-//                 <>
-//                   <h4 style={{ marginTop: "20px" }}>Loan Calculation</h4>
-//                   <p>Monthly Payment: M{loanCalculation.monthlyPayment}</p>
-//                   <p>Total to Repay: M{loanCalculation.totalAmount}</p>
+//                   <h4 style={{ marginTop: "20px" }}>Additional Notes</h4>
+//                   <p>{formData.additional_notes}</p>
 //                 </>
 //               )}
 //             </div>
-
-//             {errors.submit && <ErrorMessage style={{ marginTop: "20px" }}>{errors.submit}</ErrorMessage>}
 //           </div>
 //         </FormSection>
 //       )}
@@ -595,8 +514,12 @@
 //             Continue
 //           </PrimaryButton>
 //         ) : (
-//           <PrimaryButton onClick={handleSubmit} style={{ marginLeft: "auto" }} disabled={isSubmitting}>
-//             {isSubmitting ? "Submitting..." : "Submit Application"}
+//           <PrimaryButton 
+//             onClick={handleSubmit} 
+//             style={{ marginLeft: "auto" }}
+//             disabled={isSubmitting}
+//           >
+//             {isSubmitting ? 'Submitting...' : 'Submit Application'}
 //           </PrimaryButton>
 //         )}
 //       </ButtonGroup>
@@ -608,8 +531,6 @@
 
 
 
-
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -617,9 +538,8 @@ import { useAuth } from "../../context/AuthContext"
 import styled from "styled-components"
 import { FaArrowLeft, FaCheck } from "react-icons/fa"
 import { useNavigate } from "react-router-dom"
-
-
-
+// Import the API utility
+import { loanApi, mfiApi } from "../../utils/api"
 
 const ApplicationContainer = styled.div`
   background: var(--card-bg);
@@ -629,7 +549,6 @@ const ApplicationContainer = styled.div`
   max-width: 800px;
   margin: 0 auto;
 `
-
 
 const ApplicationHeader = styled.div`
   display: flex;
@@ -823,8 +742,6 @@ const StepLabel = styled.div`
   font-weight: ${(props) => (props.active ? "600" : "400")};
 `
 
-
-
 const LoanApplicationForm = () => {
   const { user, api } = useAuth() // Get authenticated user and API instance
   const [currentStep, setCurrentStep] = useState(1)
@@ -836,7 +753,7 @@ const LoanApplicationForm = () => {
     term: "",
     purpose: "",
     additional_notes: "",
-    mfi_id: ""
+    mfi_id: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -846,32 +763,29 @@ const LoanApplicationForm = () => {
   // Fetch MFIs when component mounts
   useEffect(() => {
     const fetchMFIs = async () => {
-      setLoadingMFIs(true);
+      setLoadingMFIs(true)
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/mfis/active/`, {
-          headers: {
-            'Authorization': `Bearer ${user.access}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch MFIs');
-        }
-
-        const data = await response.json();
-        setMfis(data);
-        setError(null);
+        const data = await mfiApi.getActiveMFIs(user.access)
+        console.log("Fetched MFIs:", data)
+        setMfis(data)
+        setError(null)
       } catch (err) {
-        console.error('Error fetching MFIs:', err);
-        setError('Failed to load MFIs. Please refresh the page or try again later.');
-      } finally {
-        setLoadingMFIs(false);
-      }
-    };
+        console.error("Error fetching MFIs:", err)
+        setError("Failed to load MFIs. Please refresh the page or try again later.")
 
-    fetchMFIs();
-  }, [user.access]);
+        // Provide some mock data for testing if the API fails
+        setMfis([
+          { mfi_id: "550e8400-e29b-41d4-a716-446655440000", name: "Basotho Finance Solutions", location: "Maseru" },
+          { mfi_id: "550e8400-e29b-41d4-a716-446655440001", name: "Khoebo Loans", location: "Leribe" },
+          { mfi_id: "550e8400-e29b-41d4-a716-446655440002", name: "Potlako Loans Inc.", location: "Mafeteng" },
+        ])
+      } finally {
+        setLoadingMFIs(false)
+      }
+    }
+
+    fetchMFIs()
+  }, [user.access])
 
   // Render MFI selection with loading state
   const renderMFISelection = () => (
@@ -880,15 +794,9 @@ const LoanApplicationForm = () => {
       {loadingMFIs ? (
         <div>Loading MFIs...</div>
       ) : (
-        <Select
-          name="mfi_id"
-          value={formData.mfi_id}
-          onChange={handleInputChange}
-          required
-          disabled={loadingMFIs}
-        >
+        <Select name="mfi_id" value={formData.mfi_id} onChange={handleInputChange} required disabled={loadingMFIs}>
           <option value="">Select an MFI</option>
-          {mfis.map(mfi => (
+          {mfis.map((mfi) => (
             <option key={mfi.mfi_id} value={mfi.mfi_id}>
               {mfi.name} - {mfi.location}
             </option>
@@ -896,90 +804,76 @@ const LoanApplicationForm = () => {
         </Select>
       )}
     </FormGroup>
-  );
+  )
 
-    // Display any errors at the top of the form
-  const renderError = () => error && (
-    <div style={{
-      color: 'red',
-      backgroundColor: 'rgba(255, 0, 0, 0.1)',
-      padding: '10px',
-      borderRadius: '4px',
-      marginBottom: '20px'
-    }}>
-      {error}
-    </div>
-  );
-
+  // Display any errors at the top of the form
+  const renderError = () =>
+    error && (
+      <div
+        style={{
+          color: "red",
+          backgroundColor: "rgba(255, 0, 0, 0.1)",
+          padding: "10px",
+          borderRadius: "4px",
+          marginBottom: "20px",
+        }}
+      >
+        {error}
+      </div>
+    )
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }))
   }
 
+  // Update the handleSubmit function to use the API utility
   const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setError(null);
+    setIsSubmitting(true)
+    setError(null)
 
     // Validate form data
     if (!formData.amount || !formData.term || !formData.purpose || !formData.mfi_id) {
-      setError('Please fill in all required fields');
-      setIsSubmitting(false);
-      return;
+      setError("Please fill in all required fields")
+      setIsSubmitting(false)
+      return
     }
 
     try {
-      const response = await api.post('/api/loans/apply/', {
-        amount: parseFloat(formData.amount),
-        term: parseInt(formData.term),
+      // Create the request payload
+      const payload = {
+        amount: Number.parseFloat(formData.amount),
+        term: Number.parseInt(formData.term),
         purpose: formData.purpose.toUpperCase(),
-        additional_notes: formData.additional_notes || '',
-        mfi_id: formData.mfi_id
-      });
-
-      if (response.data) {
-        alert('Loan application submitted successfully!');
-        navigate('/borrower/dashboard', {
-          state: { 
-            success: true, 
-            message: 'Loan application submitted successfully!',
-            loanId: response.data.loan_id 
-          }
-        });
+        additional_notes: formData.additional_notes || "",
+        mfi_id: formData.mfi_id,
       }
+
+      console.log("Submitting loan application:", payload)
+
+      // Use the API utility to submit the loan application
+      const response = await loanApi.applyForLoan(user.access, payload)
+
+      // Handle successful submission
+      console.log("Loan application submitted successfully:", response)
+
+      navigate("/borrower/dashboard", {
+        state: {
+          success: true,
+          message: "Loan application submitted successfully!",
+          loanId: response.loan_id,
+        },
+      })
     } catch (err) {
-      console.error('Error submitting loan application:', err);
-      setError(err.response?.data?.detail || 'Failed to submit loan application');
+      console.error("Error submitting loan application:", err)
+      setError(err.message || "Failed to submit loan application. Please try again.")
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
-
-
-  // const handleSubmit = async () => {
-  //   setIsSubmitting(true)
-  //   setError(null)
-
-  //   try {
-  //     const response = await api.post('/api/loans/apply/', {
-  //       amount: parseFloat(formData.amount),
-  //       term: parseInt(formData.term),
-  //       purpose: formData.purpose,
-  //       additional_notes: formData.additional_notes
-  //     })
-
-  //     // Handle successful submission
-  //     alert('Loan application submitted successfully!')
-  //     // You might want to redirect to a confirmation page or loans list
-  //   } catch (err) {
-  //     setError(err.response?.data?.detail || 'Failed to submit loan application')
-  //   } finally {
-  //     setIsSubmitting(false)
-  //   }
-  // }
+  }
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
@@ -996,13 +890,11 @@ const LoanApplicationForm = () => {
   return (
     <ApplicationContainer>
       <ApplicationHeader>
-        <BackButton onClick={() => navigate('/borrower/dashboard')}>
+        <BackButton onClick={() => navigate("/borrower/dashboard")}>
           <FaArrowLeft />
         </BackButton>
         <ApplicationTitle>New Loan Application</ApplicationTitle>
       </ApplicationHeader>
-
-      
 
       <StepIndicator>
         <Step active={currentStep === 1} completed={currentStep > 1}>
@@ -1017,11 +909,7 @@ const LoanApplicationForm = () => {
         </Step>
       </StepIndicator>
 
-      {error && (
-        <div style={{ color: 'red', marginBottom: '20px', textAlign: 'center' }}>
-          {error}
-        </div>
-      )}
+      {error && <div style={{ color: "red", marginBottom: "20px", textAlign: "center" }}>{error}</div>}
 
       {currentStep === 1 && (
         <FormSection>
@@ -1041,12 +929,7 @@ const LoanApplicationForm = () => {
             </FormGroup>
             <FormGroup>
               <Label>Loan Term (Months)</Label>
-              <Select
-                name="term"
-                value={formData.term}
-                onChange={handleInputChange}
-                required
-              >
+              <Select name="term" value={formData.term} onChange={handleInputChange} required>
                 <option value="">Select loan term</option>
                 <option value="3">3 months</option>
                 <option value="6">6 months</option>
@@ -1061,12 +944,7 @@ const LoanApplicationForm = () => {
           <FormRow>
             <FormGroup>
               <Label>Purpose of Loan</Label>
-              <Select
-                name="purpose"
-                value={formData.purpose}
-                onChange={handleInputChange}
-                required
-              >
+              <Select name="purpose" value={formData.purpose} onChange={handleInputChange} required>
                 <option value="">Select purpose</option>
                 <option value="personal">Personal</option>
                 <option value="business">Business</option>
@@ -1123,12 +1001,8 @@ const LoanApplicationForm = () => {
             Continue
           </PrimaryButton>
         ) : (
-          <PrimaryButton 
-            onClick={handleSubmit} 
-            style={{ marginLeft: "auto" }}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Application'}
+          <PrimaryButton onClick={handleSubmit} style={{ marginLeft: "auto" }} disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Submit Application"}
           </PrimaryButton>
         )}
       </ButtonGroup>
@@ -1137,4 +1011,3 @@ const LoanApplicationForm = () => {
 }
 
 export default LoanApplicationForm
-
