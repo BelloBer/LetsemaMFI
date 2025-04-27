@@ -2,7 +2,31 @@
 from rest_framework import serializers
 from .models import Loan
 from users.models import MFI
-# loans/serializers.py
+from users.serializers import BorrowerProfileSerializer, MFIListSerializer
+
+class LoanSerializer(serializers.ModelSerializer):
+    borrower_details = BorrowerProfileSerializer(source='borrower', read_only=True)
+    mfi_details = MFIListSerializer(source='mfi', read_only=True)
+    
+    class Meta:
+        model = Loan
+        fields = [
+            'loan_id', 
+            'borrower', 
+            'borrower_details',
+            'mfi',
+            'mfi_details',
+            'amount', 
+            'status',
+            'purpose',
+            'issued_date',
+            'due_date',
+            'term',
+            'interest',
+            'additional_notes'
+        ]
+        read_only_fields = ['loan_id', 'borrower', 'mfi', 'issued_date', 'due_date']
+
 class LoanApplicationSerializer(serializers.ModelSerializer):
     mfi_id = serializers.UUIDField(write_only=True)  # Add this field
 

@@ -24,6 +24,8 @@ import GlobalStyles from "./styles/GlobalStyles"
 import BorrowerRegistrationPage from "./pages/BorrowerRegistrationPage"
 import BorrowerRoutes from "./pages/borrower/BorrowerRoutes"
 import Unauthorized from "./pages/Unauthorized"
+import RegisterLoanOfficer from './pages/loans/RegisterLoanOfficer'
+import LoanDetails from './pages/loans/LoanDetails'
 
 const AppContainer = styled.div`
   display: flex;
@@ -111,7 +113,22 @@ const App = () => {
                       <Route path="/users" element={<UserManagement />} />
                       <Route path="/mfis" element={<MFIManagement />} />
                       <Route path="/register-staff" element={<Register />} />
+                      <Route path="/register-loan-officer" element={<RegisterLoanOfficer />} />
                     </Routes>
+                  </PageContainer>
+                </AppContainer>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/loans/:loanId"
+            element={
+              <ProtectedRoute roles={["SYSTEM_ADMIN", "MFI_ADMIN", "LOAN_OFFICER", "CREDIT_ANALYST"]}>
+                <AppContainer>
+                  <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+                  <PageContainer style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}>
+                    <Navbar sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+                    <LoanDetails />
                   </PageContainer>
                 </AppContainer>
               </ProtectedRoute>

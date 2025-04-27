@@ -49,7 +49,14 @@ class User(AbstractUser):
     ]
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='BORROWER')
-    mfi = models.ForeignKey(MFI, on_delete=models.SET_NULL, null=True, blank=True)  # Link to MFI for staff roles
+    mfi = models.ForeignKey(
+        MFI,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        to_field='mfi_id',  # Explicitly point to the UUID field
+        db_column='mfi_id'  # Optional: ensures the DB column matches
+    )
     
     groups = models.ManyToManyField(
         'auth.Group',

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import styled from "styled-components"
-import { FaArrowLeft, FaMoneyBillWave, FaCalendarAlt, FaFileAlt, FaCalculator } from "react-icons/fa"
+import { FaArrowLeft, FaUser, FaMoneyBillWave, FaCalendarAlt, FaFileAlt, FaCalculator, FaBuilding } from "react-icons/fa"
 import { loanApi } from "../../utils/api"
 import { calculateLoanDetails } from "../../utils/loanCalculations"
 
@@ -13,7 +13,7 @@ const DetailsContainer = styled.div`
   border-radius: 12px;
   padding: 30px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  max-width: 800px;
+  max-width: 1000px;
   margin: 90px auto 30px;
 `
 
@@ -80,7 +80,7 @@ const LoanStatusBadge = styled.span`
   }};
 `
 
-const LoanInfoSection = styled.div`
+const InfoSection = styled.div`
   margin-bottom: 30px;
 `
 
@@ -132,63 +132,47 @@ const ErrorMessage = styled.div`
   margin-bottom: 20px;
 `
 
-const CalculationSection = styled.div`
-  background: var(--background);
-  border-radius: 8px;
-  padding: 20px;
-  margin-top: 20px;
-`
-
-const CalculationGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 15px;
-`
-
-const CalculationItem = styled.div`
+const ActionButtons = styled.div`
   display: flex;
-  flex-direction: column;
-`
-
-const CalculationLabel = styled.div`
-  font-size: 14px;
-  color: var(--text-light);
-  margin-bottom: 5px;
-`
-
-const CalculationValue = styled.div`
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
-`
-
-const PaymentScheduleTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
+  gap: 10px;
   margin-top: 20px;
 `
 
-const TableHeader = styled.th`
-  text-align: left;
-  padding: 12px 15px;
-  background: var(--card-bg);
-  color: var(--text);
-  font-weight: 600;
+const ActionButton = styled.button`
+  padding: 10px 20px;
+  border-radius: 8px;
   font-size: 14px;
-  border-bottom: 1px solid var(--border);
-`
-
-const TableRow = styled.tr`
-  &:hover {
-    background: var(--background);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `
 
-const TableCell = styled.td`
-  padding: 12px 15px;
-  font-size: 14px;
-  border-bottom: 1px solid var(--border);
+const ApproveButton = styled(ActionButton)`
+  background: var(--success);
+  color: white;
+  border: none;
+  
+  &:hover:not(:disabled) {
+    background: var(--success-dark);
+  }
+`
+
+const RejectButton = styled(ActionButton)`
+  background: var(--danger);
+  color: white;
+  border: none;
+  
+  &:hover:not(:disabled) {
+    background: var(--danger-dark);
+  }
 `
 
 const LoanDetails = () => {
@@ -196,41 +180,53 @@ const LoanDetails = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [loan, setLoan] = useState(null)
-  const [loanCalculations, setLoanCalculations] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
-    const fetchLoanDetails = async () => {
-      try {
-        const data = await loanApi.getLoanDetails(user.access, loanId)
-        setLoan(data)
-        
-        // Calculate loan details
-        const calculations = calculateLoanDetails(
-          Number(data.amount),
-          Number(data.interest),
-          Number(data.term)
-        )
-        setLoanCalculations(calculations)
-        
-        setError(null)
-      } catch (err) {
-        console.error("Error fetching loan details:", err)
-        setError("Failed to load loan details. Please try again later.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchLoanDetails()
-  }, [loanId, user.access])
+  }, [loanId])
+
+  const fetchLoanDetails = async () => {
+    try {
+      console.log("Fetching loan details for ID:", loanId)
+      const data = await loanApi.getLoanDetails(user.access, loanId)
+      console.log("Received loan data:", data)
+      setLoan(data)
+      setError(null)
+    } catch (err) {
+      console.error("Error fetching loan details:", err)
+      if (err.message.includes("permission")) {
+        setError("You do not have permission to view this loan")
+      } else if (err.message.includes("not found")) {
+        setError("Loan not found")
+      } else {
+        setError(err.message || "Failed to load loan details. Please try again later.")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStatusUpdate = async (newStatus) => {
+    setUpdating(true)
+    try {
+      await loanApi.updateLoanStatus(user.access, loanId, newStatus)
+      await fetchLoanDetails() // Refresh loan details
+    } catch (err) {
+      console.error("Error updating loan status:", err)
+      setError("Failed to update loan status. Please try again.")
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   if (loading) {
     return (
       <DetailsContainer>
         <DetailsHeader>
-          <BackButton onClick={() => navigate("/borrower/dashboard")}>
+          <BackButton onClick={() => navigate("/loans")}>
             <FaArrowLeft />
           </BackButton>
           <DetailsTitle>Loan Details</DetailsTitle>
@@ -240,10 +236,38 @@ const LoanDetails = () => {
     )
   }
 
+  if (error) {
+    return (
+      <DetailsContainer>
+        <DetailsHeader>
+          <BackButton onClick={() => navigate("/loans")}>
+            <FaArrowLeft />
+          </BackButton>
+          <DetailsTitle>Loan Details</DetailsTitle>
+        </DetailsHeader>
+        <ErrorMessage>{error}</ErrorMessage>
+      </DetailsContainer>
+    )
+  }
+
+  if (!loan) {
+    return (
+      <DetailsContainer>
+        <DetailsHeader>
+          <BackButton onClick={() => navigate("/loans")}>
+            <FaArrowLeft />
+          </BackButton>
+          <DetailsTitle>Loan Details</DetailsTitle>
+        </DetailsHeader>
+        <ErrorMessage>Loan not found</ErrorMessage>
+      </DetailsContainer>
+    )
+  }
+
   return (
     <DetailsContainer>
       <DetailsHeader>
-        <BackButton onClick={() => navigate("/borrower/dashboard")}>
+        <BackButton onClick={() => navigate("/loans")}>
           <FaArrowLeft />
         </BackButton>
         <DetailsTitle>Loan Details</DetailsTitle>
@@ -254,13 +278,41 @@ const LoanDetails = () => {
         )}
       </DetailsHeader>
 
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-
       {loan && (
         <>
-          <LoanInfoSection>
+          <InfoSection>
             <SectionTitle>
-              <FaFileAlt /> Loan Information
+              <FaUser /> Borrower Information
+            </SectionTitle>
+            <InfoGrid>
+              <InfoItem>
+                <InfoLabel>Full Name</InfoLabel>
+                <InfoValue>{loan.borrower_details.full_name}</InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>National ID</InfoLabel>
+                <InfoValue>{loan.borrower_details.national_id}</InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Phone</InfoLabel>
+                <InfoValue>{loan.borrower_details.phone}</InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Email</InfoLabel>
+                <InfoValue>{loan.borrower_details.email}</InfoValue>
+              </InfoItem>
+              <InfoItem>
+                <InfoLabel>Address</InfoLabel>
+                <InfoValue>
+                  {loan.borrower_details.address.street}, {loan.borrower_details.address.city}
+                </InfoValue>
+              </InfoItem>
+            </InfoGrid>
+          </InfoSection>
+
+          <InfoSection>
+            <SectionTitle>
+              <FaMoneyBillWave /> Loan Information
             </SectionTitle>
             <InfoGrid>
               <InfoItem>
@@ -296,63 +348,32 @@ const LoanDetails = () => {
                 <InfoValue>{loan.mfi_details.name}</InfoValue>
               </InfoItem>
             </InfoGrid>
-          </LoanInfoSection>
-
-          {loanCalculations && (
-            <LoanInfoSection>
-              <SectionTitle>
-                <FaCalculator /> Loan Calculations
-              </SectionTitle>
-              <CalculationGrid>
-                <CalculationItem>
-                  <CalculationLabel>Monthly Payment</CalculationLabel>
-                  <CalculationValue>M{loanCalculations.monthlyPayment}</CalculationValue>
-                </CalculationItem>
-                <CalculationItem>
-                  <CalculationLabel>Total Payment</CalculationLabel>
-                  <CalculationValue>M{loanCalculations.totalPayment}</CalculationValue>
-                </CalculationItem>
-                <CalculationItem>
-                  <CalculationLabel>Total Interest</CalculationLabel>
-                  <CalculationValue>M{loanCalculations.totalInterest}</CalculationValue>
-                </CalculationItem>
-              </CalculationGrid>
-
-              <SectionTitle style={{ marginTop: "20px" }}>Payment Schedule</SectionTitle>
-              <PaymentScheduleTable>
-                <thead>
-                  <tr>
-                    <TableHeader>Payment #</TableHeader>
-                    <TableHeader>Date</TableHeader>
-                    <TableHeader>Payment Amount</TableHeader>
-                    <TableHeader>Principal</TableHeader>
-                    <TableHeader>Interest</TableHeader>
-                    <TableHeader>Remaining Balance</TableHeader>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loanCalculations.paymentSchedule.map((payment) => (
-                    <TableRow key={payment.paymentNumber}>
-                      <TableCell>{payment.paymentNumber}</TableCell>
-                      <TableCell>{payment.paymentDate.toLocaleDateString()}</TableCell>
-                      <TableCell>M{payment.paymentAmount.toFixed(2)}</TableCell>
-                      <TableCell>M{payment.principalPayment.toFixed(2)}</TableCell>
-                      <TableCell>M{payment.interestPayment.toFixed(2)}</TableCell>
-                      <TableCell>M{payment.remainingBalance.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </tbody>
-              </PaymentScheduleTable>
-            </LoanInfoSection>
-          )}
+          </InfoSection>
 
           {loan.additional_notes && (
-            <LoanInfoSection>
+            <InfoSection>
               <SectionTitle>
                 <FaFileAlt /> Additional Notes
               </SectionTitle>
               <p>{loan.additional_notes}</p>
-            </LoanInfoSection>
+            </InfoSection>
+          )}
+
+          {loan.status === "PENDING" && (
+            <ActionButtons>
+              <ApproveButton
+                onClick={() => handleStatusUpdate("APPROVED")}
+                disabled={updating}
+              >
+                Approve Loan
+              </ApproveButton>
+              <RejectButton
+                onClick={() => handleStatusUpdate("REJECTED")}
+                disabled={updating}
+              >
+                Reject Loan
+              </RejectButton>
+            </ActionButtons>
           )}
         </>
       )}

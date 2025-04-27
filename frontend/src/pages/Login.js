@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useNavigate, Link } from "react-router-dom"
 import styled from "styled-components"
-import { FaUser, FaLock, FaSignInAlt, FaUserTie } from "react-icons/fa"
+import { FaUser, FaLock, FaSignInAlt, FaUserTie, FaEye, FaEyeSlash } from "react-icons/fa"
 
 const LoginWrapper = styled.div`
   display: flex;
@@ -167,6 +167,23 @@ const LoginTab = styled.button`
   }
 `
 
+const PasswordToggle = styled.button`
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  
+  &:hover {
+    color: var(--text);
+  }
+`
+
 const Login = () => {
   const [credentials, setCredentials] = useState({
     username: "",
@@ -175,6 +192,7 @@ const Login = () => {
   const [loginType, setLoginType] = useState("borrower") // "borrower" or "staff"
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
 
@@ -247,11 +265,17 @@ const Login = () => {
               <FaLock />
             </InputIcon>
             <Input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={credentials.password}
               onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
             />
+            <PasswordToggle
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </PasswordToggle>
           </FormGroup>
 
           <Button type="submit" disabled={loading}>

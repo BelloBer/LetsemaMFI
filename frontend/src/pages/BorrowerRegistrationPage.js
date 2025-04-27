@@ -1,5 +1,3 @@
-
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -16,6 +14,8 @@ import {
   FaCalendarAlt,
   FaUserPlus,
   FaBuilding,
+  FaEye,
+  FaEyeSlash,
 } from "react-icons/fa"
 
 const RegisterWrapper = styled.div`
@@ -202,6 +202,23 @@ const LoginLink = styled.div`
   }
 `
 
+const PasswordToggle = styled.button`
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  
+  &:hover {
+    color: var(--text);
+  }
+`
+
 const BorrowerRegistration = () => {
   const [formData, setFormData] = useState({
     username: "",
@@ -219,7 +236,8 @@ const BorrowerRegistration = () => {
       postal_code: "",
     },
   })
-
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -335,7 +353,7 @@ const BorrowerRegistration = () => {
                   <FaLock />
                 </InputIcon>
                 <Input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="Password"
                   value={formData.password}
@@ -343,13 +361,19 @@ const BorrowerRegistration = () => {
                   required
                   minLength="8"
                 />
+                <PasswordToggle
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </PasswordToggle>
               </FormGroup>
               <FormGroup>
                 <InputIcon>
                   <FaLock />
                 </InputIcon>
                 <Input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   placeholder="Confirm Password"
                   value={formData.confirmPassword}
@@ -357,6 +381,12 @@ const BorrowerRegistration = () => {
                   required
                   minLength="8"
                 />
+                <PasswordToggle
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </PasswordToggle>
               </FormGroup>
             </FormRow>
           </FormSection>
@@ -486,12 +516,6 @@ const BorrowerRegistration = () => {
             </FormRow>
           </FormSection>
           
-          
-
-
-
-                
-
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Creating Account..." : "Register as Borrower"}
             {!isSubmitting && <FaUserPlus />}

@@ -56,7 +56,29 @@ export const loanApi = {
   },
 
   getLoanDetails: async (token, loanId) => {
-    const response = await fetch(`${LOANS_API_URL}/${loanId}/`, {
+    try {
+      const response = await fetch(`${LOANS_API_URL}/${loanId}/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || `Failed to fetch loan details: ${response.status}`)
+      }
+
+      return handleApiResponse(response)
+    } catch (error) {
+      console.error("API Error in getLoanDetails:", error)
+      throw error
+    }
+  },
+
+  getBorrowerLoans: async (token) => {
+    const response = await fetch(`${LOANS_API_URL}/borrower/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -67,13 +89,26 @@ export const loanApi = {
     return handleApiResponse(response)
   },
 
-  getBorrowerLoans: async (token) => {
-    const response = await fetch(`${LOANS_API_URL}/borrower/`, {
+  getMFILoans: async (token) => {
+    const response = await fetch(`${LOANS_API_URL}/mfi/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
+    })
+
+    return handleApiResponse(response)
+  },
+
+  updateLoanStatus: async (token, loanId, status) => {
+    const response = await fetch(`${LOANS_API_URL}/${loanId}/status/`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
     })
 
     return handleApiResponse(response)

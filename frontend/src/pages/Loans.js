@@ -1,8 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import styled from "styled-components"
 import { FaSearch, FaPlus, FaFilter, FaEllipsisV, FaFileAlt, FaCheck, FaTimes, FaClock } from "react-icons/fa"
+import { useAuth } from "../context/AuthContext"
+import { loanApi } from "../utils/api"
+import { useNavigate } from "react-router-dom"
 
 const LoansContainer = styled.div`
   padding: 90px 30px 30px;
@@ -161,6 +164,7 @@ const TableHeader = styled.th`
 const TableRow = styled.tr`
   &:hover {
     background: var(--background);
+    cursor: pointer;
   }
 
   &:not(:last-child) {
@@ -291,87 +295,105 @@ const PageButton = styled.button`
   }
 `
 
-const Loans = () => {
-  const [activeTab, setActiveTab] = useState("all")
+const ActionMenu = styled.div`
+  position: relative;
+  display: inline-block;
+`
 
-  // Sample loans data with Sesotho names and Maloti currency
-  const loans = [
-    {
-      id: "L-2023-001",
-      borrower: "Thabo Mokoena",
-      amount: "M5,000",
-      interest: "12%",
-      term: "12 months",
-      date: "2023-05-15",
-      status: "Approved",
-    },
-    {
-      id: "L-2023-002",
-      borrower: "Lineo Mphutlane",
-      amount: "M8,500",
-      interest: "10%",
-      term: "24 months",
-      date: "2023-05-14",
-      status: "Pending",
-    },
-    {
-      id: "L-2023-003",
-      borrower: "Teboho Letsie",
-      amount: "M3,200",
-      interest: "15%",
-      term: "6 months",
-      date: "2023-05-12",
-      status: "Approved",
-    },
-    {
-      id: "L-2023-004",
-      borrower: "Palesa Mokete",
-      amount: "M10,000",
-      interest: "8%",
-      term: "36 months",
-      date: "2023-05-10",
-      status: "Rejected",
-    },
-    {
-      id: "L-2023-005",
-      borrower: "Tumelo Ramokoatsi",
-      amount: "M7,500",
-      interest: "11%",
-      term: "18 months",
-      date: "2023-05-08",
-      status: "Approved",
-    },
-    {
-      id: "L-2023-006",
-      borrower: "Nthabiseng Motaung",
-      amount: "M6,200",
-      interest: "13%",
-      term: "12 months",
-      date: "2023-05-05",
-      status: "Pending",
-    },
-    {
-      id: "L-2023-007",
-      borrower: "Lehlohonolo Mahao",
-      amount: "M4,800",
-      interest: "14%",
-      term: "9 months",
-      date: "2023-05-03",
-      status: "Approved",
-    },
-  ]
+const MenuContent = styled.div`
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: var(--card-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 150px;
+  z-index: 1000;
+  display: ${props => props.show ? 'block' : 'none'};
+`
+
+const MenuItem = styled.button`
+  width: 100%;
+  padding: 10px 15px;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    background: var(--background);
+  }
+
+  &.approve {
+    color: var(--success);
+  }
+
+  &.reject {
+    color: var(--danger);
+  }
+`
+
+const Loans = () => {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState("all")
+  const [loans, setLoans] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [selectedLoan, setSelectedLoan] = useState(null)
+  const [showMenu, setShowMenu] = useState(false)
+
+  useEffect(() => {
+    fetchLoans()
+  }, [])
+
+  const fetchLoans = async () => {
+    try {
+      const data = await loanApi.getMFILoans(user.access)
+      setLoans(data)
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching loans:', err)
+      setError('Failed to load loans. Please try again later.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleStatusUpdate = async (loanId, newStatus) => {
+    try {
+      await loanApi.updateLoanStatus(user.access, loanId, newStatus)
+      // Refresh the loans list
+      fetchLoans()
+      setShowMenu(false)
+    } catch (err) {
+      console.error('Error updating loan status:', err)
+      setError('Failed to update loan status. Please try again.')
+    }
+  }
+
+  const handleLoanClick = (loanId) => {
+    navigate(`/loans/${loanId}`)
+  }
 
   // Filter loans based on active tab
-  const filteredLoans = activeTab === "all" ? loans : loans.filter((loan) => loan.status.toLowerCase() === activeTab)
+  const filteredLoans = activeTab === "all" 
+    ? loans 
+    : loans.filter(loan => loan.status.toLowerCase() === activeTab)
 
   // Status icon mapping
   const getStatusIcon = (status) => {
     switch (status) {
-      case "Approved":
+      case "APPROVED":
         return <FaCheck />
-      case "Pending":
+      case "PENDING":
         return <FaClock />
-      case "Rejected":
+      case "REJECTED":
         return <FaTimes />
       default:
         return null
@@ -387,7 +409,7 @@ const Loans = () => {
             <FaFilter />
             Filter
           </SecondaryButton>
-          <PrimaryButton>
+          <PrimaryButton onClick={() => navigate("/loans/new")}>
             <FaPlus />
             New Loan
           </PrimaryButton>
@@ -418,6 +440,12 @@ const Loans = () => {
         </FilterTab>
       </FilterTabs>
 
+      {error && (
+        <div style={{ color: 'red', marginBottom: '20px', textAlign: 'center' }}>
+          {error}
+        </div>
+      )}
+
       <LoansTable>
         <Table>
           <thead>
@@ -434,20 +462,20 @@ const Loans = () => {
           </thead>
           <tbody>
             {filteredLoans.map((loan) => (
-              <TableRow key={loan.id}>
+              <TableRow key={loan.loan_id} onClick={() => handleLoanClick(loan.loan_id)}>
                 <TableCell>
                   <LoanID>
                     <LoanIcon>
                       <FaFileAlt />
                     </LoanIcon>
-                    <LoanIDText>{loan.id}</LoanIDText>
+                    <LoanIDText>{loan.loan_id}</LoanIDText>
                   </LoanID>
                 </TableCell>
-                <TableCell>{loan.borrower}</TableCell>
-                <TableCell>{loan.amount}</TableCell>
-                <TableCell>{loan.interest}</TableCell>
-                <TableCell>{loan.term}</TableCell>
-                <TableCell>{loan.date}</TableCell>
+                <TableCell>{loan.borrower_details.full_name}</TableCell>
+                <TableCell>M{loan.amount}</TableCell>
+                <TableCell>{loan.interest}%</TableCell>
+                <TableCell>{loan.term} months</TableCell>
+                <TableCell>{new Date(loan.issued_date).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <StatusBadge status={loan.status}>
                     {getStatusIcon(loan.status)}
@@ -455,9 +483,34 @@ const Loans = () => {
                   </StatusBadge>
                 </TableCell>
                 <TableCell>
-                  <ActionButton>
-                    <FaEllipsisV />
-                  </ActionButton>
+                  <ActionMenu>
+                    <ActionButton onClick={() => {
+                      setSelectedLoan(loan)
+                      setShowMenu(!showMenu)
+                    }}>
+                      <FaEllipsisV />
+                    </ActionButton>
+                    {selectedLoan?.loan_id === loan.loan_id && (
+                      <MenuContent show={showMenu}>
+                        {loan.status === "PENDING" && (
+                          <>
+                            <MenuItem 
+                              className="approve"
+                              onClick={() => handleStatusUpdate(loan.loan_id, "APPROVED")}
+                            >
+                              <FaCheck /> Approve
+                            </MenuItem>
+                            <MenuItem 
+                              className="reject"
+                              onClick={() => handleStatusUpdate(loan.loan_id, "REJECTED")}
+                            >
+                              <FaTimes /> Reject
+                            </MenuItem>
+                          </>
+                        )}
+                      </MenuContent>
+                    )}
+                  </ActionMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -465,12 +518,10 @@ const Loans = () => {
         </Table>
 
         <Pagination>
-          <PageInfo>Showing 1-7 of 7 loans</PageInfo>
+          <PageInfo>Showing {filteredLoans.length} loans</PageInfo>
           <PageControls>
             <PageButton disabled>&lt;</PageButton>
             <PageButton active>1</PageButton>
-            <PageButton>2</PageButton>
-            <PageButton>3</PageButton>
             <PageButton>&gt;</PageButton>
           </PageControls>
         </Pagination>

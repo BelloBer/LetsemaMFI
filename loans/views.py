@@ -1,15 +1,13 @@
 from django.shortcuts import render
-
-# Create your views here.
-
-#loans/views.py
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Loan
-from .serializers import LoanApplicationSerializer
+from .serializers import LoanApplicationSerializer, LoanSerializer
 from users.models import Borrower, MFI
 from decimal import Decimal
+from django.http import Http404
+from rest_framework.exceptions import PermissionDenied
 
 # loans/views.py
 class LoanApplicationView(generics.CreateAPIView):
@@ -59,3 +57,75 @@ class LoanApplicationView(generics.CreateAPIView):
             return Response({
                 'detail': str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class MFILoansView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = LoanSerializer
+
+    def get_queryset(self):
+        # Get the MFI associated with the user
+        mfi = self.request.user.mfi
+        if not mfi:
+            return Loan.objects.none()
+        return Loan.objects.filter(mfi=mfi).order_by('-issued_date')
+
+class LoanStatusUpdateView(generics.UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = LoanSerializer
+    queryset = Loan.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        loan = self.get_object()
+        
+        # Check if user belongs to the same MFI as the loan
+        if request.user.mfi != loan.mfi:
+            return Response(
+                {'detail': 'You do not have permission to update this loan'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Get the new status from request data
+        new_status = request.data.get('status')
+        if new_status not in ['APPROVED', 'REJECTED']:
+            return Response(
+                {'detail': 'Invalid status. Must be either APPROVED or REJECTED'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update the loan status
+        loan.status = new_status
+        loan.save()
+
+        return Response(self.get_serializer(loan).data)
+
+class BorrowerLoansView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = LoanSerializer
+
+    def get_queryset(self):
+        # Get the borrower associated with the user
+        try:
+            borrower = Borrower.objects.get(user=self.request.user)
+            return Loan.objects.filter(borrower=borrower).order_by('-issued_date')
+        except Borrower.DoesNotExist:
+            return Loan.objects.none()
+
+class LoanDetailView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = LoanSerializer
+    queryset = Loan.objects.all()
+
+    def get_object(self):
+        try:
+            loan = super().get_object()
+            # Check if the user is either the borrower or belongs to the loan's MFI
+            if (hasattr(self.request.user, 'borrower') and 
+                self.request.user.borrower == loan.borrower) or (
+                hasattr(self.request.user, 'mfi') and 
+                self.request.user.mfi == loan.mfi):
+                return loan
+            raise PermissionError("You do not have permission to view this loan")
+        except Loan.DoesNotExist:
+            raise Http404("Loan not found")
+        except PermissionError as e:
+            raise PermissionDenied(str(e))
