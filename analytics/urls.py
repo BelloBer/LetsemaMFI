@@ -1,16 +1,9 @@
 from django.urls import path
-from .views import (
-    DistributionMetricsView, 
-    CreditHistoryView, 
-    BorrowerCreditHistoryView,
-    DistributedCreditHistoryView,
-    UpdateDistributedCreditHistoryView
-)
+from analytics import views
 
 urlpatterns = [
-    path('metrics/', DistributionMetricsView.as_view(), name='distribution-metrics'),
-    path('credit-history/', CreditHistoryView.as_view(), name='credit-history'),
-    path('borrower-credit-history/', BorrowerCreditHistoryView.as_view(), name='borrower-credit-history'),
-    path('distributed-credit-history/', DistributedCreditHistoryView.as_view(), name='distributed-credit-history'),
-    path('update-distributed-credit-history/', UpdateDistributedCreditHistoryView.as_view(), name='update-distributed-credit-history'),
+    path('test-atlas-connection/', views.test_mongodb_atlas_connection, name='test_mongodb_atlas_connection'),
+    path('distributed-credit-history/<str:national_id>/', views.get_distributed_credit_history, name='get_distributed_credit_history'),
+    path('distributed-credit-history/', views.get_distributed_credit_history, name='get_distributed_credit_history_query'),
+    path('distributed-credit-stats/', views.get_distributed_credit_stats, name='get_distributed_credit_stats'),
 ]

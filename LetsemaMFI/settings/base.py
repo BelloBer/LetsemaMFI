@@ -1,31 +1,26 @@
-from .mongodb import MONGODB_DATABASES, MongoDBRouter
+import os
 
 # MongoDB settings
-MONGODB_NAME = 'letsema_mfi'
-MONGODB_HOST = 'localhost'
-MONGODB_PORT = 27017
-MONGODB_USERNAME = ''
-MONGODB_PASSWORD = ''
-
+MONGODB_NAME = os.environ.get('MONGODB_DATABASE', 'letsema_mfi')
 MONGODB_HOST = os.environ.get('MONGODB_HOST', 'letsema.iasgr.mongodb.net')
 MONGODB_PORT = int(os.environ.get('MONGODB_PORT', 27017))
 MONGODB_USERNAME = os.environ.get('MONGODB_USERNAME', 'tebellolenyatsabernice')
-MONGODB_PASSWORD = os.environ.get('MONGODB_PASSWORD', '')
-MONGODB_DATABASE = os.environ.get('MONGODB_DATABASE', 'letsema_mfi')
+MONGODB_PASSWORD = os.environ.get('MONGODB_PASSWORD', 'Letsema123')
+MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb+srv://tebellolenyatsabernice:Letsema123@letsema.iasgr.mongodb.net/?retryWrites=true&w=majority&appName=letsema')
 
 # Add MongoDB to databases
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'letsema_mfi'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': os.environ.get('SUPABASE_DBNAME', 'postgres'),
+        'USER': os.environ.get('SUPABASE_USER', 'postgres'),
+        'PASSWORD': os.environ.get('SUPABASE_PASSWORD', ''),
+        'HOST': os.environ.get('SUPABASE_HOST', 'localhost'),
+        'PORT': os.environ.get('SUPABASE_PORT', '5432'),
     },
     'mongodb': {
         'ENGINE': 'django_mongodb_engine',
-        'NAME': MONGODB_DATABASE,
+        'NAME': MONGODB_NAME,
         'HOST': MONGODB_HOST,
         'PORT': MONGODB_PORT,
         'USER': MONGODB_USERNAME,
@@ -34,7 +29,9 @@ DATABASES = {
         'OPTIONS': {
             'retryWrites': True,
             'w': 'majority',
-            'appName': 'letsema'
+            'appName': 'letsema',
+            'ssl': True,
+            'ssl_cert_reqs': False  # For Atlas connections
         }
     }
 }

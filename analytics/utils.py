@@ -4,6 +4,10 @@ from django.utils import timezone
 from datetime import timedelta
 from users.models import Borrower, MFI
 import uuid
+from .atlas_utils import get_atlas_db
+import logging
+
+logger = logging.getLogger(__name__)
 
 def get_location_code_from_name(location_name):
     """
@@ -139,6 +143,14 @@ def update_distributed_credit_history(borrower_id, national_id, mfi_id=None):
     """
     Update the distributed credit history for a borrower across all MFIs in the same location
     """
+    logger.info(f"Updating distributed credit history for borrower {borrower_id} with national ID {national_id}")
+    
+    # Get MongoDB Atlas connection
+    atlas_db = get_atlas_db()
+    if not atlas_db:
+        logger.error("Failed to connect to MongoDB Atlas")
+        return None
+        
     try:
         # Get borrower information
         borrower = Borrower.objects.get(borrower_id=borrower_id)

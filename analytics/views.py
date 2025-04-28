@@ -1,266 +1,134 @@
-from django.shortcuts import render
-from rest_framework import generics, status
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
-from .models import DistributionMetrics, CreditHistory, DistributedCreditHistory, LesothoDistrict
-from .serializers import DistributionMetricsSerializer, CreditHistorySerializer, DistributedCreditHistorySerializer
-from .utils import update_distribution_metrics, update_distributed_credit_history, create_credit_history_entry, get_location_code_from_name
-from django.utils import timezone
-from datetime import timedelta
-from users.models import Borrower, MFI
+from rest_framework import status
+from analytics.atlas_utils import get_atlas_client, get_atlas_db
+from analytics.models import DistributedCreditHistory, CreditHistory, DistributionMetrics
+import logging
 
-# Create your views here.
+logger = logging.getLogger(__name__)
 
-class DistributionMetricsView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = DistributionMetricsSerializer
-
-    def get_queryset(self):
-        mfi_id = self.request.user.mfi.mfi_id if hasattr(self.request.user, 'mfi') else None
-        if not mfi_id:
-            return []
-        
-        # Get time range from query params
-        days = int(self.request.query_params.get('days', 30))
-        start_date = timezone.now() - timedelta(days=days)
-        
-        # Update metrics before returning
-        update_distribution_metrics(mfi_id, days)
-        
-        return DistributionMetrics.objects(
-            mfi_id=str(mfi_id),
-            date__gte=start_date
-        ).order_by('-date')
-
-    def post(self, request, *args, **kwargs):
-        mfi_id = request.user.mfi.mfi_id if hasattr(request.user, 'mfi') else None
-        if not mfi_id:
-            return Response(
-                {'detail': 'User is not associated with an MFI'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        days = int(request.data.get('days', 30))
-        metrics = update_distribution_metrics(mfi_id, days)
-        
-        if not metrics:
-            return Response(
-                {'detail': 'Failed to update distribution metrics'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
+@api_view(['GET'])
+def test_mongodb_atlas_connection(request):
+    """
+    Test MongoDB Atlas connection
+    """
+    client = get_atlas_client()
+    if not client:
         return Response(
-            self.get_serializer(metrics).data,
-            status=status.HTTP_201_CREATED
+            {"status": "error", "message": "Failed to connect to MongoDB Atlas"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-
-class CreditHistoryView(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = CreditHistorySerializer
-
-    def get_queryset(self):
-        # For MFI staff, they can view any borrower's history
-        if hasattr(self.request.user, 'mfi'):
-            mfi_id = self.request.user.mfi.mfi_id
-            borrower_id = self.request.query_params.get('borrower_id')
-            location = self.request.query_params.get('location')
-            
-            queryset = CreditHistory.objects(mfi_id=str(mfi_id))
-            
-            if borrower_id:
-                queryset = queryset.filter(borrower_id=str(borrower_id))
-            if location:
-                queryset = queryset.filter(mfi_location=location)
-                
-            return queryset.order_by('-date')
-        
-        # For borrowers, they can only view their own history
-        if hasattr(self.request.user, 'borrower'):
-            borrower_id = self.request.user.borrower.borrower_id
-            return CreditHistory.objects(
-                borrower_id=str(borrower_id)
-            ).order_by('-date')
-        
-        return []
     
-    def post(self, request, *args, **kwargs):
-        # Only MFI staff can create credit history entries
-        if not hasattr(request.user, 'mfi'):
-            return Response(
-                {'detail': 'Only MFI staff can create credit history entries'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        mfi_id = request.user.mfi.mfi_id
-        borrower_id = request.data.get('borrower_id')
-        
-        if not borrower_id:
-            return Response(
-                {'detail': 'borrower_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            borrower = Borrower.objects.get(borrower_id=borrower_id)
-        except Borrower.DoesNotExist:
-            return Response(
-                {'detail': 'Borrower not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # Create credit history entry
-        credit_data = request.data.get('credit_data', {})
-        credit_history = create_credit_history_entry(borrower_id, mfi_id, credit_data)
+    db = get_atlas_db(client)
+    if not db:
+        return Response(
+            {"status": "error", "message": "Failed to get MongoDB Atlas database"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+    # Get list of collections
+    collections = db.list_collection_names()
+    
+    return Response({
+        "status": "success",
+        "message": "Successfully connected to MongoDB Atlas",
+        "database": db.name,
+        "collections": collections
+    })
+
+@api_view(['GET'])
+def get_distributed_credit_history(request, national_id=None):
+    """
+    Get distributed credit history for a borrower by national ID
+    """
+    if not national_id:
+        national_id = request.query_params.get('national_id')
+    
+    if not national_id:
+        return Response(
+            {"status": "error", "message": "National ID is required"}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Query distributed credit history
+        credit_history = DistributedCreditHistory.objects(national_id=national_id).first()
         
         if not credit_history:
             return Response(
-                {'detail': 'Failed to create credit history entry'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"status": "error", "message": "No credit history found for this national ID"}, 
+                status=status.HTTP_404_NOT_FOUND
             )
         
+        # Log access
+        mfi_id = request.query_params.get('mfi_id', 'unknown')
+        user_id = request.user.id if request.user.is_authenticated else 'anonymous'
+        credit_history.add_access_log(mfi_id, user_id, 'API query')
+        
+        # Convert to dictionary for response
+        result = {
+            "borrower_id": credit_history.borrower_id,
+            "national_id": credit_history.national_id,
+            "full_name": credit_history.full_name,
+            "location": credit_history.location,
+            "credit_score": credit_history.credit_score,
+            "total_loans": credit_history.total_loans,
+            "active_loans": credit_history.active_loans,
+            "total_amount_borrowed": credit_history.total_amount_borrowed,
+            "outstanding_amount": credit_history.outstanding_amount,
+            "avg_days_late": credit_history.avg_days_late,
+            "source_mfis": credit_history.source_mfis
+        }
+        
+        return Response({"status": "success", "data": result})
+    
+    except Exception as e:
+        logger.error(f"Error retrieving distributed credit history: {str(e)}")
         return Response(
-            self.get_serializer(credit_history).data,
-            status=status.HTTP_201_CREATED
+            {"status": "error", "message": f"Error retrieving credit history: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-class BorrowerCreditHistoryView(generics.RetrieveAPIView):
-    permission_classes = [IsAuthenticated]
-    serializer_class = CreditHistorySerializer
-
-    def get_object(self):
-        if not hasattr(self.request.user, 'borrower'):
-            return None
+@api_view(['GET'])
+def get_distributed_credit_stats(request):
+    """
+    Get statistics about distributed credit history
+    """
+    try:
+        # Count records by location
+        locations = DistributedCreditHistory.objects.aggregate([
+            {"$group": {"_id": "$location", "count": {"$sum": 1}}}
+        ])
         
-        borrower_id = self.request.user.borrower.borrower_id
-        return CreditHistory.objects(
-            borrower_id=str(borrower_id)
-        ).order_by('-date').first()
-
-class DistributedCreditHistoryView(APIView):
-    permission_classes = [IsAuthenticated]
+        # Calculate average credit scores
+        avg_scores = DistributedCreditHistory.objects.aggregate([
+            {"$group": {"_id": None, "avg_score": {"$avg": "$credit_score"}}}
+        ])
+        
+        # Count active loans
+        active_loans = DistributedCreditHistory.objects.aggregate([
+            {"$group": {"_id": None, "total_active": {"$sum": "$active_loans"}}}
+        ])
+        
+        # Format results
+        locations_result = list(locations)
+        avg_score = list(avg_scores)[0]['avg_score'] if list(avg_scores) else 0
+        total_active = list(active_loans)[0]['total_active'] if list(active_loans) else 0
+        
+        return Response({
+            "status": "success", 
+            "data": {
+                "locations": locations_result,
+                "avg_credit_score": avg_score,
+                "total_active_loans": total_active,
+                "total_borrowers": DistributedCreditHistory.objects.count()
+            }
+        })
     
-    def get(self, request, *args, **kwargs):
-        # Only MFI staff can access distributed credit history
-        if not hasattr(request.user, 'mfi'):
-            return Response(
-                {'detail': 'Only MFI staff can access distributed credit history'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        mfi_id = request.user.mfi.mfi_id
-        national_id = request.query_params.get('national_id')
-        borrower_id = request.query_params.get('borrower_id')
-        
-        if not national_id and not borrower_id:
-            return Response(
-                {'detail': 'Either national_id or borrower_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # If borrower_id is provided, get the national_id
-        if borrower_id and not national_id:
-            try:
-                borrower = Borrower.objects.get(borrower_id=borrower_id)
-                national_id = borrower.national_id
-            except Borrower.DoesNotExist:
-                return Response(
-                    {'detail': 'Borrower not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        
-        # Get the location of the MFI
-        try:
-            mfi = MFI.objects.get(mfi_id=mfi_id)
-            location_name = mfi.location
-            location_code = get_location_code_from_name(location_name)
-            
-            if not location_code:
-                return Response(
-                    {'detail': 'MFI location could not be determined'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        except MFI.DoesNotExist:
-            return Response(
-                {'detail': 'MFI not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # Get or create distributed credit history
-        try:
-            borrower = Borrower.objects.get(national_id=national_id)
-            distributed_history = update_distributed_credit_history(
-                borrower.borrower_id, national_id, mfi_id
-            )
-            
-            if not distributed_history:
-                return Response(
-                    {'detail': 'No credit history found for this borrower'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            serializer = DistributedCreditHistorySerializer(distributed_history)
-            return Response(serializer.data)
-            
-        except Borrower.DoesNotExist:
-            return Response(
-                {'detail': 'Borrower not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-class UpdateDistributedCreditHistoryView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request, *args, **kwargs):
-        # Only MFI staff can update distributed credit history
-        if not hasattr(request.user, 'mfi'):
-            return Response(
-                {'detail': 'Only MFI staff can update distributed credit history'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        mfi_id = request.user.mfi.mfi_id
-        borrower_id = request.data.get('borrower_id')
-        national_id = request.data.get('national_id')
-        
-        if not borrower_id and not national_id:
-            return Response(
-                {'detail': 'Either borrower_id or national_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # If national_id is provided, get the borrower_id
-        if national_id and not borrower_id:
-            try:
-                borrower = Borrower.objects.get(national_id=national_id)
-                borrower_id = borrower.borrower_id
-            except Borrower.DoesNotExist:
-                return Response(
-                    {'detail': 'Borrower not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        
-        # If borrower_id is provided, get the national_id
-        if borrower_id and not national_id:
-            try:
-                borrower = Borrower.objects.get(borrower_id=borrower_id)
-                national_id = borrower.national_id
-            except Borrower.DoesNotExist:
-                return Response(
-                    {'detail': 'Borrower not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        
-        # Update distributed credit history
-        distributed_history = update_distributed_credit_history(
-            borrower_id, national_id, mfi_id
+    except Exception as e:
+        logger.error(f"Error retrieving distributed credit stats: {str(e)}")
+        return Response(
+            {"status": "error", "message": f"Error retrieving credit stats: {str(e)}"}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-        
-        if not distributed_history:
-            return Response(
-                {'detail': 'Failed to update distributed credit history'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        serializer = DistributedCreditHistorySerializer(distributed_history)
-        return Response(serializer.data, status=status.HTTP_200_OK)

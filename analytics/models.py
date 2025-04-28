@@ -1,157 +1,131 @@
 from django.db import models
-import mongoengine as me
-from datetime import datetime
-import uuid
+from mongoengine import Document, StringField, DateTimeField, IntField, DictField, ListField, FloatField, EmbeddedDocument, EmbeddedDocumentField
+import datetime
 
-class LesothoDistrict(models.Model):
+class DistributedCreditHistory(Document):
     """
-    Model to store Lesotho district information
+    Distributed Credit History model for MongoDB
+    
+    This model stores aggregated credit history data from multiple MFIs in the same location.
+    It's designed to be queried by borrower's national ID to get a complete credit history.
     """
-    DISTRICT_CHOICES = [
-        ('BERA', 'Berea'),
-        ('BUTHA', 'Butha-Buthe'),
-        ('LERIBE', 'Leribe'),
-        ('MAFETENG', 'Mafeteng'),
-        ('MASERU', 'Maseru'),
-        ('MOHALES', 'Mohale\'s Hoek'),
-        ('MOKHOTLONG', 'Mokhotlong'),
-        ('QACHA', 'Qacha\'s Nek'),
-        ('QUTHING', 'Quthing'),
-        ('THABA', 'Thaba-Tseka'),
-    ]
-
-    name = models.CharField(max_length=50, choices=DISTRICT_CHOICES)
-    code = models.CharField(max_length=10)
-    population = models.IntegerField(default=0)
-    area = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # in square kilometers
-
-    def __str__(self):
-        return self.name
-
-class DistributionMetrics(me.Document):
-    """
-    MongoDB model for loan distribution metrics by location
-    """
-    mfi_id = me.UUIDField(required=True)
-    date = me.DateTimeField(default=datetime.now)
+    borrower_id = StringField(required=True)
+    national_id = StringField(required=True, unique_with='location')
+    full_name = StringField(required=True)
+    location = StringField(required=True)  # City, district, or region
+    credit_score = FloatField(default=0.0)
     
-    # Overall metrics
-    total_loans = me.IntField(default=0)
-    total_amount = me.DecimalField(precision=2, default=0)
-    average_loan_size = me.DecimalField(precision=2, default=0)
+    # Aggregated loan history from all MFIs in this location
+    total_loans = IntField(default=0)
+    active_loans = IntField(default=0)
+    total_amount_borrowed = FloatField(default=0.0)
+    outstanding_amount = FloatField(default=0.0)
+    last_payment_date = DateTimeField()
+    avg_days_late = FloatField(default=0.0)
     
-    # Location-based distribution
-    location_distribution = me.DictField(default={
-        'BERA': {'count': 0, 'amount': 0, 'percentage': 0},
-        'BUTHA': {'count': 0, 'amount': 0, 'percentage': 0},
-        'LERIBE': {'count': 0, 'amount': 0, 'percentage': 0},
-        'MAFETENG': {'count': 0, 'amount': 0, 'percentage': 0},
-        'MASERU': {'count': 0, 'amount': 0, 'percentage': 0},
-        'MOHALES': {'count': 0, 'amount': 0, 'percentage': 0},
-        'MOKHOTLONG': {'count': 0, 'amount': 0, 'percentage': 0},
-        'QACHA': {'count': 0, 'amount': 0, 'percentage': 0},
-        'QUTHING': {'count': 0, 'amount': 0, 'percentage': 0},
-        'THABA': {'count': 0, 'amount': 0, 'percentage': 0},
-    })
+    # Loan status across MFIs (to prevent loan stacking)
+    loan_statuses = ListField(DictField())  # List of dicts with MFI ID, loan status, amount, etc.
     
-    # Additional metrics
-    active_borrowers_by_location = me.DictField(default={})
-    loan_repayment_rate_by_location = me.DictField(default={})
-    average_loan_size_by_location = me.DictField(default={})
+    # Source MFIs for this aggregated data
+    source_mfis = ListField(StringField())
     
-    meta = {
-        'collection': 'distribution_metrics',
-        'ordering': ['-date'],
-        'indexes': [
-            'mfi_id',
-            'date'
-        ]
-    }
-
-class CreditHistory(me.Document):
-    """
-    MongoDB model for borrower credit history
-    """
-    borrower_id = me.UUIDField(required=True)
-    mfi_id = me.UUIDField(required=True)
-    mfi_location = me.StringField()  # Store the MFI's location
-    date = me.DateTimeField(default=datetime.now)
+    # Data sharing and privacy
+    data_sharing_agreement = StringField(default='limited')  # full, limited, none
+    data_sharing_log = ListField(DictField())  # Who accessed this data and when
     
-    # Credit score components
-    credit_score = me.IntField(default=0)
-    payment_history = me.DictField(default={})
-    loan_utilization = me.DecimalField(precision=2, default=0)
-    loan_diversity = me.IntField(default=0)
-    
-    # Loan history
-    total_loans = me.IntField(default=0)
-    total_amount_borrowed = me.DecimalField(precision=2, default=0)
-    total_amount_repaid = me.DecimalField(precision=2, default=0)
-    
-    # Payment behavior
-    on_time_payments = me.IntField(default=0)
-    late_payments = me.IntField(default=0)
-    defaulted_payments = me.IntField(default=0)
-    
-    # Risk factors
-    risk_factors = me.ListField(me.StringField(), default=[])
-    
-    meta = {
-        'collection': 'credit_history',
-        'ordering': ['-date'],
-        'indexes': [
-            'borrower_id',
-            'mfi_id',
-            'mfi_location',
-            ('borrower_id', 'date'),
-            ('mfi_id', 'date'),
-            ('mfi_location', 'date'),
-        ]
-    }
-
-class DistributedCreditHistory(me.Document):
-    """
-    MongoDB model for distributed borrower credit history across MFIs in the same location
-    """
-    borrower_id = me.UUIDField(required=True)
-    national_id = me.StringField(required=True)  # To identify borrowers across MFIs
-    location = me.StringField(required=True)  # Location code (e.g., 'MASERU')
-    date = me.DateTimeField(default=datetime.now)
-    
-    # Aggregated credit score from all MFIs in the location
-    aggregated_credit_score = me.IntField(default=0)
-    
-    # Contributing MFIs
-    contributing_mfis = me.ListField(me.DictField(), default=[])  # List of {mfi_id, mfi_name, location}
-    
-    # Aggregated loan history
-    total_loans_count = me.IntField(default=0)
-    total_amount_borrowed = me.DecimalField(precision=2, default=0)
-    total_amount_repaid = me.DecimalField(precision=2, default=0)
-    
-    # Aggregated payment behavior
-    on_time_payments = me.IntField(default=0)
-    late_payments = me.IntField(default=0)
-    defaulted_payments = me.IntField(default=0)
-    
-    # Consolidated risk factors
-    risk_factors = me.ListField(me.StringField(), default=[])
-    
-    # Detailed history from each MFI (limited information)
-    mfi_records = me.DictField(default={})
-    
-    # Audit trail for data sharing
-    data_sharing_log = me.ListField(me.DictField(), default=[])  # List of {mfi_id, timestamp, action}
+    # Metadata
+    created_at = DateTimeField(default=datetime.datetime.now)
+    updated_at = DateTimeField(default=datetime.datetime.now)
     
     meta = {
         'collection': 'distributed_credit_history',
-        'ordering': ['-date'],
         'indexes': [
             'borrower_id',
             'national_id',
             'location',
-            ('national_id', 'location'),
-            ('borrower_id', 'date'),
-            ('location', 'date'),
+            ('national_id', 'location'),  # Compound index
+            ('borrower_id', '-created_at')
+        ]
+    }
+    
+    def add_access_log(self, mfi_id, user_id, purpose):
+        """Add an entry to the data sharing log"""
+        log_entry = {
+            'mfi_id': mfi_id,
+            'user_id': user_id,
+            'purpose': purpose,
+            'timestamp': datetime.datetime.now()
+        }
+        self.data_sharing_log.append(log_entry)
+        self.save()
+
+class CreditHistory(Document):
+    """
+    Credit History model for MongoDB
+    
+    This model stores individual credit history records for each MFI.
+    These records are then aggregated into the DistributedCreditHistory model.
+    """
+    borrower_id = StringField(required=True)
+    national_id = StringField(required=True)
+    mfi_id = StringField(required=True)
+    mfi_name = StringField(required=True)
+    mfi_location = StringField(required=True)
+    
+    # Loan history at this MFI
+    loans_count = IntField(default=0)
+    active_loans = IntField(default=0)
+    total_amount = FloatField(default=0.0)
+    outstanding_amount = FloatField(default=0.0)
+    repayment_history = ListField(DictField())  # List of dicts with date, amount, on_time
+    
+    # Borrower risk assessment
+    internal_score = FloatField()
+    days_late_avg = FloatField(default=0.0)
+    
+    # Metadata
+    date = DateTimeField(default=datetime.datetime.now)
+    
+    meta = {
+        'collection': 'credit_history',
+        'indexes': [
+            'borrower_id',
+            'national_id',
+            'mfi_id',
+            'mfi_location',
+            ('borrower_id', '-date'),
+            ('mfi_id', '-date'),
+            ('mfi_location', '-date')
+        ]
+    }
+
+class DistributionMetrics(Document):
+    """
+    Distribution Metrics model for MongoDB
+    
+    This model tracks loan distribution metrics by location, MFI, and time period.
+    It's used for analytics and reporting.
+    """
+    mfi_id = StringField(required=True)
+    location = StringField(required=True)
+    date = DateTimeField(default=datetime.datetime.now)
+    
+    # Distribution metrics
+    num_loans = IntField(default=0)
+    total_amount = FloatField(default=0.0)
+    avg_loan_size = FloatField(default=0.0)
+    default_rate = FloatField(default=0.0)
+    
+    # Demographics
+    borrower_demographics = DictField()  # Age groups, gender distribution, etc.
+    
+    meta = {
+        'collection': 'distribution_metrics',
+        'indexes': [
+            'mfi_id',
+            'location',
+            'date',
+            ('mfi_id', '-date'),
+            ('location', '-date')
         ]
     }
