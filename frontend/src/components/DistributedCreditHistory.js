@@ -1,81 +1,50 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Card, CardContent, Typography, Grid, Box, Button, CircularProgress, Alert } from "@mui/material"
 import axios from "../utils/axios"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Typography,
-  Box,
-  Grid,
-  Chip,
-  CircularProgress,
-  Alert,
-  Button,
-} from "@mui/material"
-import { DataGrid } from "@mui/x-data-grid"
 
-const DistributedCreditHistory = ({ nationalId, borrowerId }) => {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+const DistributedCreditHistory = ({ nationalId }) => {
   const [creditHistory, setCreditHistory] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [updating, setUpdating] = useState(false)
 
-  useEffect(() => {
-    const fetchDistributedCreditHistory = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const params = {}
-        if (nationalId) {
-          params.national_id = nationalId
-        } else if (borrowerId) {
-          params.borrower_id = borrowerId
-        } else {
-          throw new Error("Either nationalId or borrowerId is required")
-        }
-
-        const response = await axios.get("/api/analytics/distributed-credit-history/", { params })
-        setCreditHistory(response.data)
-      } catch (err) {
-        console.error("Error fetching distributed credit history:", err)
-        setError(err.response?.data?.detail || err.message || "Failed to fetch distributed credit history")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (nationalId || borrowerId) {
-      fetchDistributedCreditHistory()
-    }
-  }, [nationalId, borrowerId])
-
-  const handleUpdateHistory = async () => {
+  const fetchCreditHistory = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      setLoading(true)
-      setError(null)
-
-      const payload = {}
-      if (nationalId) {
-        payload.national_id = nationalId
-      } else if (borrowerId) {
-        payload.borrower_id = borrowerId
-      }
-
-      const response = await axios.post("/api/analytics/update-distributed-credit-history/", payload)
+      const response = await axios.get(`/api/loans/distributed-credit-history/${nationalId}/`)
       setCreditHistory(response.data)
     } catch (err) {
-      console.error("Error updating distributed credit history:", err)
-      setError(err.response?.data?.detail || err.message || "Failed to update distributed credit history")
+      setError(err.response?.data?.error || "Failed to fetch credit history")
     } finally {
       setLoading(false)
     }
   }
 
+  const updateCreditHistory = async () => {
+    setUpdating(true)
+    try {
+      await axios.post(`/api/loans/update-credit-history/${nationalId}/`)
+      // Fetch the updated credit history
+      await fetchCreditHistory()
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to update credit history")
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  useEffect(() => {
+    if (nationalId) {
+      fetchCreditHistory()
+    }
+  }, [nationalId])
+
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <Box display="flex" justifyContent="center" my={4}>
         <CircularProgress />
       </Box>
     )
@@ -83,158 +52,202 @@ const DistributedCreditHistory = ({ nationalId, borrowerId }) => {
 
   if (error) {
     return (
-      <Box>
-        <Alert severity="error">{error}</Alert>
-        <Box mt={2}>
-          <Button variant="contained" color="primary" onClick={handleUpdateHistory}>
-            Create/Update Credit History
-          </Button>
-        </Box>
-      </Box>
+      <Alert severity="error" sx={{ my: 2 }}>
+        {error}
+      </Alert>
     )
   }
 
   if (!creditHistory) {
     return (
-      <Box>
-        <Alert severity="info">No distributed credit history found for this borrower.</Alert>
-        <Box mt={2}>
-          <Button variant="contained" color="primary" onClick={handleUpdateHistory}>
-            Create Credit History
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            No credit history found
+          </Typography>
+          <Button variant="contained" color="primary" onClick={updateCreditHistory} disabled={updating}>
+            {updating ? "Updating..." : "Create Credit History"}
           </Button>
-        </Box>
-      </Box>
+        </CardContent>
+      </Card>
     )
   }
 
-  // Define columns for MFI records table
-  const mfiColumns = [
-    { field: "mfi_name", headerName: "MFI", flex: 1 },
-    { field: "credit_score", headerName: "Credit Score", width: 120 },
-    { field: "total_loans", headerName: "Total Loans", width: 120 },
-    {
-      field: "total_amount_borrowed",
-      headerName: "Amount Borrowed",
-      width: 150,
-      valueFormatter: (params) => `M${params.value.toFixed(2)}`,
-    },
-    { field: "on_time_payments", headerName: "On-time Payments", width: 150 },
-    { field: "late_payments", headerName: "Late Payments", width: 120 },
-    { field: "defaulted_payments", headerName: "Defaults", width: 120 },
-    {
-      field: "last_updated",
-      headerName: "Last Updated",
-      width: 180,
-      valueFormatter: (params) => new Date(params.value).toLocaleString(),
-    },
-  ]
-
-  // Transform MFI records for DataGrid
-  const mfiRecords = Object.entries(creditHistory.mfi_records || {}).map(([mfi_id, record]) => ({
-    id: mfi_id,
-    mfi_id,
-    ...record,
-  }))
-
   return (
     <Card>
-      <CardHeader
-        title="Distributed Credit History"
-        subheader={`National ID: ${creditHistory.national_id} | Location: ${creditHistory.location}`}
-        action={
-          <Box display="flex" alignItems="center" gap={2}>
-            <Chip
-              label={`Credit Score: ${creditHistory.aggregated_credit_score}`}
-              color={
-                creditHistory.aggregated_credit_score > 700
-                  ? "success"
-                  : creditHistory.aggregated_credit_score > 500
-                    ? "warning"
-                    : "error"
-              }
-            />
-            <Button variant="outlined" size="small" onClick={handleUpdateHistory}>
-              Update
-            </Button>
-          </Box>
-        }
-      />
       <CardContent>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1">Loan Summary</Typography>
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Total Loans:</strong> {creditHistory.total_loans_count}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Total Borrowed:</strong> M{creditHistory.total_amount_borrowed.toFixed(2)}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Total Repaid:</strong> M{creditHistory.total_amount_repaid.toFixed(2)}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Repayment Rate:</strong>{" "}
-                {creditHistory.total_amount_borrowed > 0
-                  ? ((creditHistory.total_amount_repaid / creditHistory.total_amount_borrowed) * 100).toFixed(2)
-                  : 0}
-                %
-              </Typography>
-            </Box>
-          </Grid>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="h5" component="h2">
+            Credit History for {creditHistory.borrower_name}
+          </Typography>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={updateCreditHistory}
+            disabled={updating}
+            startIcon={updating ? <CircularProgress size={20} /> : null}
+          >
+            {updating ? "Updating..." : "Refresh"}
+          </Button>
+        </Box>
 
-          <Grid item xs={12} md={6}>
-            <Typography variant="subtitle1">Payment Behavior</Typography>
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>On-time Payments:</strong> {creditHistory.on_time_payments}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Late Payments:</strong> {creditHistory.late_payments}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Defaulted Payments:</strong> {creditHistory.defaulted_payments}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Total Payments:</strong>{" "}
-                {creditHistory.on_time_payments + creditHistory.late_payments + creditHistory.defaulted_payments}
-              </Typography>
-            </Box>
-          </Grid>
+        <Typography color="textSecondary" gutterBottom>
+          National ID: {creditHistory.borrower_id}
+        </Typography>
+        <Typography color="textSecondary" gutterBottom>
+          Location: {creditHistory.location.district}, {creditHistory.location.city || "N/A"}
+        </Typography>
 
-          {creditHistory.risk_factors && creditHistory.risk_factors.length > 0 && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle1">Risk Factors</Typography>
-              <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 1 }}>
-                {creditHistory.risk_factors.map((factor, index) => (
-                  <Chip key={index} label={factor} color="error" size="small" />
-                ))}
-              </Box>
+        <Box mt={3}>
+          <Typography variant="h6" gutterBottom>
+            Credit Summary
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={6} md={3}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Loans
+                  </Typography>
+                  <Typography variant="h5">{creditHistory.credit_summary.total_loans}</Typography>
+                </CardContent>
+              </Card>
             </Grid>
-          )}
-
-          <Grid item xs={12}>
-            <Typography variant="subtitle1">Contributing MFIs</Typography>
-            <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {creditHistory.contributing_mfis.map((mfi, index) => (
-                <Chip key={index} label={mfi.mfi_name} color="primary" size="small" />
-              ))}
-            </Box>
+            <Grid item xs={6} md={3}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Active Loans
+                  </Typography>
+                  <Typography variant="h5">{creditHistory.credit_summary.active_loans}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Total Amount
+                  </Typography>
+                  <Typography variant="h5">
+                    M {creditHistory.credit_summary.total_loan_amount.toLocaleString()}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Outstanding
+                  </Typography>
+                  <Typography variant="h5">
+                    M {creditHistory.credit_summary.outstanding_amount.toLocaleString()}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
+        </Box>
 
-          <Grid item xs={12}>
-            <Typography variant="subtitle1">MFI Records</Typography>
-            <Box sx={{ height: 400, width: "100%", mt: 2 }}>
-              <DataGrid
-                rows={mfiRecords}
-                columns={mfiColumns}
-                pageSize={5}
-                rowsPerPageOptions={[5]}
-                disableSelectionOnClick
-              />
-            </Box>
+        <Box mt={3}>
+          <Typography variant="h6" gutterBottom>
+            Payment History
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={4}>
+              <Card variant="outlined" sx={{ bgcolor: "#e8f5e9" }}>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    On-time Payments
+                  </Typography>
+                  <Typography variant="h5">{creditHistory.credit_summary.on_time_payments}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={4}>
+              <Card variant="outlined" sx={{ bgcolor: "#fff8e1" }}>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Late Payments
+                  </Typography>
+                  <Typography variant="h5">{creditHistory.credit_summary.late_payments}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={4}>
+              <Card variant="outlined" sx={{ bgcolor: "#ffebee" }}>
+                <CardContent>
+                  <Typography color="textSecondary" gutterBottom>
+                    Missed Payments
+                  </Typography>
+                  <Typography variant="h5">{creditHistory.credit_summary.missed_payments}</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
-        </Grid>
+        </Box>
+
+        <Box mt={3}>
+          <Typography variant="h6" gutterBottom>
+            Risk Assessment
+          </Typography>
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="body1" gutterBottom>
+                Risk Score:{" "}
+                {creditHistory.credit_summary.risk_score ? (
+                  <Box
+                    component="span"
+                    fontWeight="bold"
+                    color={
+                      creditHistory.credit_summary.risk_score > 70
+                        ? "success.main"
+                        : creditHistory.credit_summary.risk_score > 40
+                          ? "warning.main"
+                          : "error.main"
+                    }
+                  >
+                    {creditHistory.credit_summary.risk_score.toFixed(1)}
+                  </Box>
+                ) : (
+                  "N/A"
+                )}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Data contributed by {creditHistory.contributing_mfis} MFIs
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Last updated: {new Date(creditHistory.last_updated).toLocaleString()}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Box mt={3}>
+          <Typography variant="h6" gutterBottom>
+            MFI Contributions
+          </Typography>
+          <Grid container spacing={2}>
+            {creditHistory.mfi_contributions.map((contribution, index) => (
+              <Grid item xs={12} md={6} key={index}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="subtitle1" gutterBottom>
+                      {contribution.mfi_name}
+                    </Typography>
+                    <Typography variant="body2">Active Loans: {contribution.active_loans}</Typography>
+                    <Typography variant="body2">
+                      Payment History: {contribution.payment_history.on_time} on-time,
+                      {contribution.payment_history.late} late,
+                      {contribution.payment_history.missed} missed
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       </CardContent>
     </Card>
   )

@@ -1,4 +1,3 @@
-#backend/settings.py
 from pathlib import Path
 import os
 from dotenv import load_dotenv
@@ -70,14 +69,28 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('SUPABASE_DBNAME'),  # Default DB name in Supabase
-        'USER': os.getenv('SUPABASE_USER'),
-        'PASSWORD': os.getenv('SUPABASE_PASSWORD'),
-        'HOST': os.getenv('SUPABASE_HOST'),
-        'PORT': os.getenv('SUPABASE_PORT'),
-        'CONN_MAX_AGE': 600,  # Reuse connections for 10 minutes (600 seconds)
+        'NAME': os.environ.get('DB_NAME', 'letsema_mfi'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'OPTIONS': {
+            'application_name': 'letsema',
+            # Add Citus-specific options
+            'sslmode': 'require',  # For secure connections
+        },
     }
 }
+
+# Citus configuration
+CITUS_COORDINATOR_HOST = os.environ.get('CITUS_COORDINATOR_HOST', 'localhost')
+CITUS_COORDINATOR_PORT = os.environ.get('CITUS_COORDINATOR_PORT', '5432')
+CITUS_COORDINATOR_USER = os.environ.get('CITUS_COORDINATOR_USER', 'postgres')
+CITUS_COORDINATOR_PASSWORD = os.environ.get('CITUS_COORDINATOR_PASSWORD', '')
+CITUS_COORDINATOR_DB = os.environ.get('CITUS_COORDINATOR_DB', 'letsema_mfi')
+
+# Keep MongoDB settings for non-relational data if needed
+MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb+srv://tebellolenyatsabernice:Letsema123@letsema.iasgr.mongodb.net/?retryWrites=true&w=majority&appName=letsema')
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -133,5 +146,3 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
-
-
