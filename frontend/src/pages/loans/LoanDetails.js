@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import styled from "styled-components"
-import { FaArrowLeft, FaUser, FaMoneyBillWave, FaCalendarAlt, FaFileAlt, FaCalculator, FaBuilding } from "react-icons/fa"
+import { FaArrowLeft, FaUser, FaMoneyBillWave, FaCalendarAlt, FaFileAlt, FaCalculator, FaBuilding, FaCheck, FaTimes, FaClock } from "react-icons/fa"
 import { loanApi } from "../../utils/api"
 import { calculateLoanDetails } from "../../utils/loanCalculations"
 
@@ -222,6 +222,35 @@ const LoanDetails = () => {
     }
   }
 
+  const handleMakePayment = () => {
+    navigate(`/borrower/make-payment?loanId=${loanId}`)
+  }
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "APPROVED":
+        return <FaCheck />
+      case "PENDING":
+        return <FaClock />
+      case "REJECTED":
+        return <FaTimes />
+      case "REPAID":
+        return <FaCheck />
+      default:
+        return null
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  }
+
   if (loading) {
     return (
       <DetailsContainer>
@@ -273,7 +302,7 @@ const LoanDetails = () => {
         <DetailsTitle>Loan Details</DetailsTitle>
         {loan && (
           <LoanStatusBadge status={loan.status}>
-            {loan.status}
+            {getStatusIcon(loan.status)} {loan.status}
           </LoanStatusBadge>
         )}
       </DetailsHeader>
@@ -333,11 +362,11 @@ const LoanDetails = () => {
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Issue Date</InfoLabel>
-                <InfoValue>{new Date(loan.issued_date).toLocaleDateString()}</InfoValue>
+                <InfoValue>{formatDate(loan.issued_date)}</InfoValue>
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Due Date</InfoLabel>
-                <InfoValue>{new Date(loan.due_date).toLocaleDateString()}</InfoValue>
+                <InfoValue>{formatDate(loan.due_date)}</InfoValue>
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Purpose</InfoLabel>
@@ -374,6 +403,12 @@ const LoanDetails = () => {
                 Reject Loan
               </RejectButton>
             </ActionButtons>
+          )}
+
+          {loan.status === "APPROVED" && (
+            <ActionButton primary onClick={handleMakePayment}>
+              <FaMoneyBillWave /> Make Payment
+            </ActionButton>
           )}
         </>
       )}

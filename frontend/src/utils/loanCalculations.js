@@ -2,33 +2,33 @@
 
 export const calculateLoanDetails = (amount, interestRate, term) => {
   // Convert interest rate from percentage to decimal
-  const monthlyInterestRate = interestRate / 100 / 12
+  const annualInterestRate = interestRate / 100
   
-  // Calculate monthly payment using the loan amortization formula
-  const monthlyPayment = (amount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, term)) / 
-    (Math.pow(1 + monthlyInterestRate, term) - 1)
+  // Calculate total interest using simple interest formula: I = P * r * t
+  // where P = principal, r = annual interest rate, t = time in years
+  const totalInterest = amount * annualInterestRate * (term / 12)
   
   // Calculate total payment
-  const totalPayment = monthlyPayment * term
+  const totalPayment = amount + totalInterest
   
-  // Calculate total interest
-  const totalInterest = totalPayment - amount
+  // Calculate monthly payment
+  const monthlyPayment = totalPayment / term
   
   // Generate payment schedule
   const paymentSchedule = []
   let remainingBalance = amount
+  const principalPerMonth = amount / term
+  const interestPerMonth = totalInterest / term
   
   for (let i = 1; i <= term; i++) {
-    const interestPayment = remainingBalance * monthlyInterestRate
-    const principalPayment = monthlyPayment - interestPayment
-    remainingBalance -= principalPayment
+    remainingBalance -= principalPerMonth
     
     paymentSchedule.push({
       paymentNumber: i,
       paymentDate: new Date(Date.now() + i * 30 * 24 * 60 * 60 * 1000), // Approximate date
       paymentAmount: monthlyPayment,
-      principalPayment,
-      interestPayment,
+      principalPayment: principalPerMonth,
+      interestPayment: interestPerMonth,
       remainingBalance: Math.max(0, remainingBalance)
     })
   }
@@ -39,4 +39,5 @@ export const calculateLoanDetails = (amount, interestRate, term) => {
     totalInterest: totalInterest.toFixed(2),
     paymentSchedule
   }
-} 
+}
+

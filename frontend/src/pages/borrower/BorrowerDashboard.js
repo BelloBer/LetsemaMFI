@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import styled from "styled-components"
-import { FaPlus, FaFileAlt, FaCheck, FaTimes, FaClock } from "react-icons/fa"
+import { FaPlus, FaFileAlt, FaCheck, FaTimes, FaClock, FaMoneyBillWave } from "react-icons/fa"
 import { loanApi } from "../../utils/api"
 
 const DashboardContainer = styled.div`
@@ -160,6 +160,25 @@ const ErrorMessage = styled.div`
   margin-bottom: 20px;
 `
 
+const ActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--primary);
+  color: white;
+  border: none;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`
+
 const BorrowerDashboard = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -186,6 +205,10 @@ const BorrowerDashboard = () => {
 
   const handleLoanClick = (loanId) => {
     navigate(`/borrower/loans/${loanId}`)
+  }
+
+  const handleMakePayment = (loanId) => {
+    navigate(`/borrower/make-payment?loanId=${loanId}`)
   }
 
   const getStatusIcon = (status) => {
@@ -229,13 +252,14 @@ const BorrowerDashboard = () => {
                 <TableHeader>MFI</TableHeader>
                 <TableHeader>Date</TableHeader>
                 <TableHeader>Status</TableHeader>
+                <TableHeader>Actions</TableHeader>
               </tr>
             </thead>
             <tbody>
               {loans.map((loan) => (
-                <TableRow key={loan.loan_id} onClick={() => handleLoanClick(loan.loan_id)}>
+                <TableRow key={loan.loan_id}>
                   <TableCell>
-                    <LoanID>
+                    <LoanID onClick={() => handleLoanClick(loan.loan_id)}>
                       <LoanIcon>
                         <FaFileAlt />
                       </LoanIcon>
@@ -250,6 +274,13 @@ const BorrowerDashboard = () => {
                     <StatusBadge status={loan.status}>
                       {getStatusIcon(loan.status)} {loan.status}
                     </StatusBadge>
+                  </TableCell>
+                  <TableCell>
+                    {loan.status === "APPROVED" && (
+                      <ActionButton onClick={() => handleMakePayment(loan.loan_id)}>
+                        <FaMoneyBillWave /> Make Payment
+                      </ActionButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

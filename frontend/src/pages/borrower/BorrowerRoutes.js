@@ -4,6 +4,8 @@ import LoanApplicationForm from "./LoanApplicationForm"
 import BorrowerProfile from "./BorrowerProfile"
 import LoanDetails from "./LoanDetails"
 import BorrowerLayout from "./BorrowerLayout"
+import BorrowerRepayments from "./BorrowerRepayments"
+import MakeRepayment from "./MakeRepayment"
 
 const BorrowerRoutes = () => {
   return (
@@ -14,6 +16,8 @@ const BorrowerRoutes = () => {
         <Route path="/apply" element={<LoanApplicationForm />} />
         <Route path="/profile" element={<BorrowerProfile />} />
         <Route path="/loans/:loanId" element={<LoanDetails />} />
+        <Route path="/repayments" element={<BorrowerRepayments />} />
+        <Route path="/make-payment" element={<MakeRepayment />} />
       </Route>
     </Routes>
   )

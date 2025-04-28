@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import styled from "styled-components"
-import { FaHome, FaUser, FaFileAlt, FaSignOutAlt, FaBars, FaTimes, FaBell, FaEnvelope } from "react-icons/fa"
+import { FaHome, FaUser, FaFileAlt, FaSignOutAlt, FaBars, FaTimes, FaBell, FaEnvelope, FaMoneyBillWave } from "react-icons/fa"
 
 const LayoutContainer = styled.div`
   display: flex;
@@ -396,6 +396,11 @@ const BorrowerLayout = () => {
           <MenuItem to="/borrower/apply" active={isActive("/apply")} collapsed={sidebarCollapsed}>
             <FaFileAlt />
             <MenuText collapsed={sidebarCollapsed}>Apply for Loan</MenuText>
+          </MenuItem>
+
+          <MenuItem to="/borrower/repayments" active={isActive("/repayments")} collapsed={sidebarCollapsed}>
+            <FaMoneyBillWave />
+            <MenuText collapsed={sidebarCollapsed}>My Repayments</MenuText>
           </MenuItem>
 
           <MenuItem to="/borrower/profile" active={isActive("/profile")} collapsed={sidebarCollapsed}>

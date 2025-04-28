@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useAuth } from "../../context/AuthContext"
 import styled from "styled-components"
-import { FaArrowLeft, FaMoneyBillWave, FaCalendarAlt, FaFileAlt, FaCalculator } from "react-icons/fa"
+import { FaArrowLeft, FaMoneyBillWave, FaCalendarAlt, FaFileAlt, FaCalculator, FaCheck, FaTimes, FaClock } from "react-icons/fa"
 import { loanApi } from "../../utils/api"
 import { calculateLoanDetails } from "../../utils/loanCalculations"
 
@@ -191,6 +191,33 @@ const TableCell = styled.td`
   border-bottom: 1px solid var(--border);
 `
 
+const ActionButton = styled.button`
+  width: 100%;
+  padding: 12px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
 const LoanDetails = () => {
   const { loanId } = useParams()
   const navigate = useNavigate()
@@ -206,7 +233,7 @@ const LoanDetails = () => {
         const data = await loanApi.getLoanDetails(user.access, loanId)
         setLoan(data)
         
-        // Calculate loan details
+        // Calculate loan details using simple interest
         const calculations = calculateLoanDetails(
           Number(data.amount),
           Number(data.interest),
@@ -225,6 +252,35 @@ const LoanDetails = () => {
 
     fetchLoanDetails()
   }, [loanId, user.access])
+
+  const handleMakePayment = () => {
+    navigate(`/borrower/make-payment?loanId=${loanId}`)
+  }
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "APPROVED":
+        return <FaCheck />
+      case "PENDING":
+        return <FaClock />
+      case "REJECTED":
+        return <FaTimes />
+      case "REPAID":
+        return <FaCheck />
+      default:
+        return null
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  }
 
   if (loading) {
     return (
@@ -249,7 +305,7 @@ const LoanDetails = () => {
         <DetailsTitle>Loan Details</DetailsTitle>
         {loan && (
           <LoanStatusBadge status={loan.status}>
-            {loan.status}
+            {getStatusIcon(loan.status)} {loan.status}
           </LoanStatusBadge>
         )}
       </DetailsHeader>
@@ -281,11 +337,11 @@ const LoanDetails = () => {
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Issue Date</InfoLabel>
-                <InfoValue>{new Date(loan.issued_date).toLocaleDateString()}</InfoValue>
+                <InfoValue>{formatDate(loan.issued_date)}</InfoValue>
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Due Date</InfoLabel>
-                <InfoValue>{new Date(loan.due_date).toLocaleDateString()}</InfoValue>
+                <InfoValue>{formatDate(loan.due_date)}</InfoValue>
               </InfoItem>
               <InfoItem>
                 <InfoLabel>Purpose</InfoLabel>
@@ -353,6 +409,12 @@ const LoanDetails = () => {
               </SectionTitle>
               <p>{loan.additional_notes}</p>
             </LoanInfoSection>
+          )}
+
+          {loan.status === "APPROVED" && (
+            <ActionButton onClick={handleMakePayment}>
+              <FaMoneyBillWave /> Make Payment
+            </ActionButton>
           )}
         </>
       )}

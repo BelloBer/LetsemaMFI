@@ -2,8 +2,8 @@ from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import Loan
-from .serializers import LoanApplicationSerializer, LoanSerializer
+from .models import Loan, Repayment
+from .serializers import LoanApplicationSerializer, LoanSerializer, RepaymentSerializer, RepaymentUpdateSerializer, RepaymentCreateSerializer
 from users.models import Borrower, MFI
 from decimal import Decimal
 from django.http import Http404
@@ -129,3 +129,96 @@ class LoanDetailView(generics.RetrieveAPIView):
             raise Http404("Loan not found")
         except PermissionError as e:
             raise PermissionDenied(str(e))
+
+class RepaymentListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RepaymentSerializer
+
+    def get_queryset(self):
+        # Get the MFI associated with the user
+        mfi = self.request.user.mfi
+        if not mfi:
+            return Repayment.objects.none()
+        return Repayment.objects.filter(loan__mfi=mfi).order_by('-due_date')
+
+class BorrowerRepaymentListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RepaymentSerializer
+
+    def get_queryset(self):
+        try:
+            borrower = Borrower.objects.get(user=self.request.user)
+            return Repayment.objects.filter(loan__borrower=borrower).order_by('-due_date')
+        except Borrower.DoesNotExist:
+            return Repayment.objects.none()
+
+class RepaymentDetailView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RepaymentUpdateSerializer
+    queryset = Repayment.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        repayment = self.get_object()
+        
+        # Check if user belongs to the same MFI as the loan
+        if request.user.mfi != repayment.loan.mfi:
+            return Response(
+                {'detail': 'You do not have permission to update this repayment'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Set the marked_by field to the current user
+        request.data['marked_by'] = request.user.id
+
+        return super().update(request, *args, **kwargs)
+
+class RepaymentCreateView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RepaymentCreateSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Get the borrower associated with the user
+            borrower = Borrower.objects.get(user=self.request.user)
+            
+            # Get the loan from the request data
+            try:
+                loan = Loan.objects.get(loan_id=request.data.get('loan'))
+            except Loan.DoesNotExist:
+                return Response(
+                    {'detail': 'Loan not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Check if the loan belongs to the borrower
+            if loan.borrower != borrower:
+                return Response(
+                    {'detail': 'You do not have permission to make payments for this loan'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # Create serializer with data
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            # Save the repayment with PENDING status
+            repayment = serializer.save(
+                loan=loan,
+                status='PENDING'  # Initial status is PENDING until verified by staff
+            )
+
+            return Response({
+                'message': 'Repayment submitted successfully. Waiting for verification.',
+                'repayment_id': str(repayment.repayment_id),
+                'status': repayment.status,
+                'remaining_amount': repayment.remaining_amount
+            }, status=status.HTTP_201_CREATED)
+
+        except Borrower.DoesNotExist:
+            return Response({
+                'detail': 'User is not registered as a borrower'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'detail': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

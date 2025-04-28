@@ -1,4 +1,3 @@
-
 # loans/models.py
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -57,3 +56,51 @@ class Loan(models.Model):
 
     def __str__(self):
         return f"Loan {self.loan_id} - {self.borrower.full_name}"
+
+class Repayment(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Paid'),
+        ('OVERDUE', 'Overdue'),
+        ('UPCOMING', 'Upcoming'),
+        ('VERIFIED', 'Verified')
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('CASH', 'Cash'),
+        ('BANK_TRANSFER', 'Bank Transfer'),
+        ('MOBILE_MONEY', 'Mobile Money'),
+        ('CHEQUE', 'Cheque')
+    ]
+
+    repayment_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    loan = models.ForeignKey(Loan, on_delete=models.PROTECT, related_name='repayments')
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    remaining_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    due_date = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    payment_date = models.DateTimeField(null=True, blank=True)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
+    payment_reference = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    marked_by = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"Repayment {self.repayment_id} - {self.loan.borrower.full_name}"
+
+    def save(self, *args, **kwargs):
+        # Only update status if it's not PENDING or VERIFIED
+        if self.status not in ['PENDING', 'VERIFIED']:
+            now = timezone.now()
+            if self.due_date < now:
+                self.status = 'OVERDUE'
+            elif (self.due_date - now).days <= 7:  # If due within 7 days
+                self.status = 'UPCOMING'
+            else:
+                self.status = 'PENDING'
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['-due_date']

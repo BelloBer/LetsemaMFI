@@ -102,6 +102,21 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/loans/:loanId"
+            element={
+              <ProtectedRoute roles={["SYSTEM_ADMIN", "MFI_ADMIN", "LOAN_OFFICER", "CREDIT_ANALYST"]}>
+                <AppContainer>
+                  <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+                  <PageContainer style={{ marginLeft: sidebarCollapsed ? "80px" : "260px" }}>
+                    <Navbar sidebarCollapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
+                    <LoanDetails />
+                  </PageContainer>
+                </AppContainer>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/borrower/*"
             element={
@@ -135,3 +150,6 @@ const App = () => {
 }
 
 export default App
+
+
+

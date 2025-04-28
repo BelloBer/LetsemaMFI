@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../../context/AuthContext"
 import styled from "styled-components"
-import { FaCheck, FaTimes, FaClock, FaCalendarAlt, FaMoneyBillWave, FaUser } from "react-icons/fa"
+import { FaCheck, FaTimes, FaClock, FaCalendarAlt, FaMoneyBillWave } from "react-icons/fa"
 
 const PageContainer = styled.div`
   padding: 90px 30px 30px;
@@ -74,6 +74,8 @@ const StatusBadge = styled.span`
         return "rgba(239, 68, 68, 0.1)"
       case "UPCOMING":
         return "rgba(59, 130, 246, 0.1)"
+      case "VERIFIED":
+        return "rgba(16, 185, 129, 0.1)"
       default:
         return "rgba(100, 116, 139, 0.1)"
     }
@@ -88,6 +90,8 @@ const StatusBadge = styled.span`
         return "var(--danger)"
       case "UPCOMING":
         return "var(--primary)"
+      case "VERIFIED":
+        return "var(--success)"
       default:
         return "var(--text-light)"
     }
@@ -113,25 +117,21 @@ const InfoValue = styled.span`
   font-weight: 500;
 `
 
-const ActionButton = styled.button`
-  width: 100%;
-  padding: 10px;
-  border: none;
-  border-radius: 8px;
-  background: ${(props) => (props.primary ? "var(--primary)" : "var(--background)")};
-  color: ${(props) => (props.primary ? "white" : "var(--text)")};
+const LoanInfo = styled.div`
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+`
+
+const RemainingAmount = styled.div`
+  margin-top: 10px;
+  padding: 8px;
+  background: var(--primary-light);
+  color: white;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  &:hover {
-    opacity: 0.9;
-  }
+  text-align: center;
 `
 
 const ErrorMessage = styled.div`
@@ -142,20 +142,11 @@ const ErrorMessage = styled.div`
   margin-bottom: 20px;
 `
 
-const SuccessMessage = styled.div`
-  color: var(--success);
-  padding: 15px;
-  background: rgba(16, 185, 129, 0.1);
-  border-radius: 8px;
-  margin-bottom: 20px;
-`
-
-const RepaymentTracking = () => {
+const BorrowerRepayments = () => {
   const { api } = useAuth()
   const [repayments, setRepayments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
 
   useEffect(() => {
     fetchRepayments()
@@ -163,7 +154,7 @@ const RepaymentTracking = () => {
 
   const fetchRepayments = async () => {
     try {
-      const data = await api.get(`${process.env.REACT_APP_API_URL.replace('/users', '/loans')}/repayments/`)
+      const data = await api.get(`${process.env.REACT_APP_API_URL.replace('/users', '/loans')}/repayments/borrower/`)
       setRepayments(data)
       setError(null)
     } catch (err) {
@@ -171,25 +162,6 @@ const RepaymentTracking = () => {
       setError("Failed to load repayments. Please try again later.")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleStatusUpdate = async (repaymentId, newStatus) => {
-    try {
-      await api.put(`${process.env.REACT_APP_API_URL.replace('/users', '/loans')}/repayments/${repaymentId}/`, {
-        status: newStatus,
-        payment_date: newStatus === 'PAID' ? new Date().toISOString() : null
-      })
-      
-      setSuccess(`Repayment marked as ${newStatus.toLowerCase()}`)
-      fetchRepayments()
-      
-      setTimeout(() => {
-        setSuccess(null)
-      }, 3000)
-    } catch (err) {
-      console.error("Error updating repayment status:", err)
-      setError("Failed to update repayment status. Please try again.")
     }
   }
 
@@ -203,8 +175,29 @@ const RepaymentTracking = () => {
         return <FaTimes />
       case "UPCOMING":
         return <FaCalendarAlt />
+      case "VERIFIED":
+        return <FaCheck />
       default:
         return null
+    }
+  }
+
+  const getDisplayStatus = (repayment) => {
+    // If the repayment has a status, use it
+    if (repayment.status) {
+      return repayment.status
+    }
+    
+    // Otherwise, determine status based on dates
+    const now = new Date()
+    const dueDate = new Date(repayment.due_date)
+    
+    if (dueDate < now) {
+      return "OVERDUE"
+    } else if ((dueDate - now) / (1000 * 60 * 60 * 24) <= 7) {
+      return "UPCOMING"
+    } else {
+      return "PENDING"
     }
   }
 
@@ -221,7 +214,7 @@ const RepaymentTracking = () => {
   if (loading) {
     return (
       <PageContainer>
-        <PageTitle>Repayment Tracking</PageTitle>
+        <PageTitle>My Repayments</PageTitle>
         <p>Loading repayments...</p>
       </PageContainer>
     )
@@ -230,11 +223,10 @@ const RepaymentTracking = () => {
   return (
     <PageContainer>
       <PageHeader>
-        <PageTitle>Repayment Tracking</PageTitle>
+        <PageTitle>My Repayments</PageTitle>
       </PageHeader>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
-      {success && <SuccessMessage>{success}</SuccessMessage>}
 
       <RepaymentsGrid>
         {repayments.map((repayment) => (
@@ -244,27 +236,21 @@ const RepaymentTracking = () => {
                 <FaMoneyBillWave />
                 Repayment #{repayment.repayment_id.slice(0, 8)}
               </RepaymentTitle>
-              <StatusBadge status={repayment.status}>
-                {getStatusIcon(repayment.status)} {repayment.status}
+              <StatusBadge status={getDisplayStatus(repayment)}>
+                {getStatusIcon(getDisplayStatus(repayment))} {getDisplayStatus(repayment)}
               </StatusBadge>
             </RepaymentHeader>
 
             <RepaymentInfo>
               <InfoRow>
-                <InfoLabel>Borrower</InfoLabel>
-                <InfoValue>
-                  <FaUser style={{ marginRight: "5px" }} />
-                  {repayment.loan_details.borrower_details.full_name}
-                </InfoValue>
+                <InfoLabel>Loan ID</InfoLabel>
+                <InfoValue>{repayment.loan_details.loan_id}</InfoValue>
               </InfoRow>
               <InfoRow>
                 <InfoLabel>Amount</InfoLabel>
                 <InfoValue>M{repayment.amount}</InfoValue>
               </InfoRow>
-              <InfoRow>
-                <InfoLabel>Due Date</InfoLabel>
-                <InfoValue>{formatDate(repayment.due_date)}</InfoValue>
-              </InfoRow>
+              
               {repayment.payment_date && (
                 <InfoRow>
                   <InfoLabel>Payment Date</InfoLabel>
@@ -279,14 +265,29 @@ const RepaymentTracking = () => {
               )}
             </RepaymentInfo>
 
-            {repayment.status !== 'PAID' && (
-              <ActionButton
-                primary
-                onClick={() => handleStatusUpdate(repayment.repayment_id, 'PAID')}
-              >
-                <FaCheck /> Mark as Paid
-              </ActionButton>
-            )}
+            <LoanInfo>
+              <InfoRow>
+                <InfoLabel>Loan Amount</InfoLabel>
+                <InfoValue>M{repayment.loan_details.amount}</InfoValue>
+              </InfoRow>
+              <InfoRow>
+                <InfoLabel>Loan Term</InfoLabel>
+                <InfoValue>{repayment.loan_details.term} months</InfoValue>
+              </InfoRow>
+              <InfoRow>
+                <InfoLabel>Loan Status</InfoLabel>
+                <InfoValue>{repayment.loan_details.status}</InfoValue>
+              </InfoRow>
+              <InfoRow>
+                <InfoLabel>Loan Due Date</InfoLabel>
+                <InfoValue>{formatDate(repayment.loan_details.due_date)}</InfoValue>
+              </InfoRow>
+              {repayment.remaining_amount !== null && (
+                <RemainingAmount>
+                  Remaining Amount: M{repayment.remaining_amount}
+                </RemainingAmount>
+              )}
+            </LoanInfo>
           </RepaymentCard>
         ))}
       </RepaymentsGrid>
@@ -294,5 +295,4 @@ const RepaymentTracking = () => {
   )
 }
 
-export default RepaymentTracking
-
+export default BorrowerRepayments 
